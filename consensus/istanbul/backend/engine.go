@@ -585,6 +585,7 @@ func (sb *Backend) StartValidating(hasBadBlock func(common.Hash) bool,
 	sb.processBlock = processBlock
 	sb.validateState = validateState
 
+	// TODO(joshua) Another entrypoint to conensus engine
 	sb.logger.Info("Starting istanbul.Engine validating")
 	if err := sb.core.Start(); err != nil {
 		return err

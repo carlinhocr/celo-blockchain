@@ -26,7 +26,7 @@ import (
 
 // Start implements core.Engine.Start
 func (c *core) Start() error {
-
+	// TODO(joshua) hold here until start mining
 	roundState, err := c.createRoundState()
 	if err != nil {
 		return err

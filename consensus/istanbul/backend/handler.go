@@ -77,6 +77,7 @@ func (sb *Backend) HandleMsg(addr common.Address, msg p2p.Msg, peer consensus.Pe
 			}
 		} else if sb.IsValidating() {
 			if msg.Code == istanbul.ConsensusMsg {
+				// TODO(joshua) Only post events when primary
 				go sb.istanbulEventMux.Post(istanbul.MessageEvent{
 					Payload: data,
 				})
