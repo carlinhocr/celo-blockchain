@@ -32,20 +32,20 @@ import (
 var (
 	// errUnauthorizedMessageFromProxiedValidator is returned when the received message expected to be signed
 	// by the proxied validator, but signed from another key
-	errUnauthorizedMessageFromProxiedValidator = errors.New("message not authorized by proxied validator")
+	errUnauthorizedMessageFromProxiedValidator = errors.New("message not signed by proxied validator")
 
 	// errInvalidEnodeCertificate is returned if the enode certificate is invalid
 	errInvalidEnodeCertificate = errors.New("invalid enode certificate")
 
-	// errUnauthorizedProxiedValidator is returned if the peer connecting is not the
-	// authorized proxied validator
-	errUnauthorizedProxiedValidator = errors.New("unauthorized proxied validator")
+	// errUnauthorizedProxiedValidatorPeer is returned if the peer connecting is not an authorized
+	// proxy for this validator.
+	errUnauthorizedProxiedValidatorPeer = errors.New("connection from unauthorized peer")
 
 	// ErrStoppedProxyHandler is returned if proxy handler is stopped
-	ErrStoppedProxyHandler = errors.New("stopped proxy handler")
+	ErrStoppedProxyHandler = errors.New("proxy handler is not running")
 
 	// ErrStartedProxyHandler is returned if proxy handler is already started
-	ErrStartedProxyHandler = errors.New("started proxy handler")
+	ErrStartedProxyHandler = errors.New("proxy handler is running")
 
 	// ErrNodeNotProxiedValidator is returned if this node is not a proxied validator
 	ErrNodeNotProxiedValidator = errors.New("node not a proxied validator")
@@ -75,7 +75,7 @@ type ProxyEngine interface {
 	SendEnodeCertificateMsgToProxiedValidator(msg *istanbul.Message) error
 
 	// GetProxiedValidatorsInfo will return information about the proxied validator.
-	GetProxiedValidatorsInfo() ([]ProxiedValidatorInfo, error)
+	GetProxiedValidatorsInfo() ([]*ProxiedValidatorInfo, error)
 }
 
 type ProxiedValidatorEngine interface {

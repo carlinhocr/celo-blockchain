@@ -99,9 +99,8 @@ func (sb *Backend) HandleMsg(addr common.Address, msg p2p.Msg, peer consensus.Pe
 			return true, nil
 		}
 
-		// If we got here, then that means that there is an istanbul message type that either there
-		// is an istanbul message that is not handled, or it's a forward message not handled (e.g. a
-		// node other than a proxy received the message).
+		// If we got here, then that means that there is an istanbul message type that either is not
+		// handled by this node (e.g. this node is not a proxy, but received a forward message).
 		logger.Error("Unhandled istanbul message", "address", addr, "peer's enodeURL", peer.Node().String(), "ethMsgCode", msg.Code)
 		return false, nil
 	}
@@ -247,14 +246,13 @@ func (sb *Backend) NewChainHead(newBlock *types.Block) {
 }
 
 func (sb *Backend) RegisterPeer(peer consensus.Peer, isProxiedPeer bool) error {
-	// TODO - For added security, we may want the node keys of the proxied validators to be
-	//        registered with the proxy, and verify that all newly connected proxied peer has
-	//        the correct node key
+	// TODO: For added security, we may want verify that all newly connected proxied peer has the
+	// correct validator key
 	logger := sb.logger.New("func", "RegisterPeer")
 
 	logger.Trace("RegisterPeer called", "peer", peer, "isProxiedPeer", isProxiedPeer)
 
-	// Check to see if this connecting peer if a proxied validator
+	// Check to see if this connecting peer is a proxied validator
 	if sb.IsProxy() && isProxiedPeer {
 		sb.proxyEngine.RegisterProxiedValidatorPeer(peer)
 	} else if sb.IsProxiedValidator() {
@@ -264,7 +262,7 @@ func (sb *Backend) RegisterPeer(peer consensus.Peer, isProxiedPeer bool) error {
 	}
 
 	if err := sb.sendVersionCertificateTable(peer); err != nil {
-		logger.Info("Error sending all version certificates", "err", err)
+		logger.Debug("Error sending all version certificates", "err", err)
 	}
 
 	return nil
@@ -289,10 +287,7 @@ func (sb *Backend) Handshake(peer consensus.Peer) (bool, error) {
 		var err error
 		peerIsValidator := peer.PurposeIsSet(p2p.ValidatorPurpose)
 		if peerIsValidator {
-			msgMap := sb.RetrieveEnodeCertificateMsgMap()
-			if msgMap != nil {
-				msg = msgMap[sb.SelfNode().ID()]
-			}
+			msg = sb.RetrieveEnodeCertificateMsgMap()[sb.SelfNode().ID()]
 		}
 		// Even if we decide not to identify ourselves,
 		// send an empty message to complete the handshake

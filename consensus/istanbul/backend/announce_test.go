@@ -32,14 +32,14 @@ func TestHandleIstAnnounce(t *testing.T) {
 
 	// Pretend the signed announce version belongs to a different address
 	// but use val 1's public key so we can decrypt it using val 1's private key
-	queryEnodeEncryptedEnodeURLParams := make([]*genEncryptedEnodeURLParam, 1)
-	queryEnodeEncryptedEnodeURLParams[0] = &genEncryptedEnodeURLParam{
-		destAddress: val2Address,
-		publicKey:   b.publicKey,
-		enodeURL:    b.SelfNode().URLv4()}
+	enodeQueries := []*enodeQuery{{
+		recipientAddress:   val2Address,
+		recipientPublicKey: b.publicKey,
+		enodeURL:           b.SelfNode().URLv4(),
+	}}
 
 	// Generate an ist announce message using val1
-	istMsg, err := b.generateQueryEnodeMsg(getTimestamp(), queryEnodeEncryptedEnodeURLParams)
+	istMsg, err := b.generateQueryEnodeMsg(getTimestamp(), enodeQueries)
 	if err != nil {
 		t.Fatalf("Error on generateAnnounce: %s", err)
 	}

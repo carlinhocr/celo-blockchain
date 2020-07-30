@@ -137,7 +137,7 @@ func (pv *proxiedValidatorEngine) RegisterProxyPeer(proxyPeer consensus.Peer) er
 		pv.ph.addProxyPeer <- proxyPeer
 	} else {
 		logger.Error("Unauthorized connected peer to the proxied validator", "peerID", proxyPeer.Node().ID())
-		return errUnauthorizedProxiedValidator
+		return errUnauthorizedProxiedValidatorPeer
 	}
 
 	return nil

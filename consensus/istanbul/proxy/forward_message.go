@@ -24,16 +24,16 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-func (pv *proxiedValidatorEngine) SendForwardMsg(proxyPeers []consensus.Peer, finalDestAddresses []common.Address, ethMsgCode uint64, payload []byte, proxySpecificPayloads map[enode.ID][]byte) error {
+func (pv *proxiedValidatorEngine) SendForwardMsg(proxyPeers []consensus.Peer, validatorAddresses []common.Address, ethMsgCode uint64, payload []byte, proxySpecificPayloads map[enode.ID][]byte) error {
 	logger := pv.logger.New("func", "SendForwardMsg")
 
-	logger.Info("Sending forward msg", "ethMsgCode", ethMsgCode, "finalDestAddresses", common.ConvertToStringSlice(finalDestAddresses))
+	logger.Info("Sending forward msg", "ethMsgCode", ethMsgCode, "validatorAddresses", common.ConvertToStringSlice(validatorAddresses))
 
 	proxyToAddressesMap := make(map[consensus.Peer][]common.Address)
 
 	// If the proxy peers are not given to this function, then retrieve them via the proxy handler
 	if proxyPeers == nil {
-		valAssignments, err := pv.ph.GetValidatorAssignments(finalDestAddresses)
+		valAssignments, err := pv.ph.GetValidatorAssignments(validatorAddresses)
 		if err != nil {
 			logger.Warn("Got an error when trying to retrieve validator assignments", "err", err)
 			return err
@@ -51,7 +51,7 @@ func (pv *proxiedValidatorEngine) SendForwardMsg(proxyPeers []consensus.Peer, fi
 		}
 
 		if len(proxyToAddressesMap) == 0 {
-			logger.Warn("No proxy assigned to any of the final dest addresses for sending a fwd message", "ethMsgCode", ethMsgCode, "finalDestAddreses", common.ConvertToStringSlice(finalDestAddresses))
+			logger.Warn("No proxy assigned to any of the final dest addresses for sending a fwd message", "ethMsgCode", ethMsgCode, "finalDestAddreses", common.ConvertToStringSlice(validatorAddresses))
 			return nil
 		}
 	} else {

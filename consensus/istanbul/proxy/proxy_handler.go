@@ -28,8 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 )
 
-// This struct defines the handler that will manage all of the proxies and
-// validator assignments to them
+// proxyHandler manages all of the proxies and validator assignments to them.
 type proxyHandler struct {
 	runningFlag   bool         // indicates if `run` is currently being run in a goroutine
 	runningFlagMu sync.RWMutex // protects "runningFlag"
@@ -101,7 +100,7 @@ func (ph *proxyHandler) Start() error {
 	ph.quit = make(chan struct{})
 	go ph.run()
 
-	log.Info("Proxy handler started")
+	ph.logger.Info("Proxy handler started")
 	return nil
 }
 
@@ -117,7 +116,7 @@ func (ph *proxyHandler) Stop() error {
 	close(ph.quit)
 	ph.loopWG.Wait()
 
-	log.Info("Proxy handler stopped")
+	ph.logger.Info("Proxy handler stopped")
 	return nil
 }
 
@@ -185,20 +184,25 @@ func (ph *proxyHandler) Running() bool {
 func (ph *proxyHandler) run() {
 	logger := ph.logger.New("func", "run")
 
-	updateAnnounceVersionRequestTimestamps := make([]*time.Time, 0)
+	var updateAnnounceVersionRequestTimestamps []*time.Time
 	updateAnnounceVersionTimer := time.NewTimer(0)
 	defer updateAnnounceVersionTimer.Stop()
 	<-updateAnnounceVersionTimer.C // discard initial tick
 
-	// This function will send update the announce version at least
-	// a second later.
+	// This function will send update the announce version, sending the updated enode certificate to
+	// all proxies, who will propagate it to all validator peers, at least one second later.
 	updateAnnounceVersionInFuture := func() {
+		// Note: It important that the timestamp is added to the queue first, then the timer reset.
+		// Resetting the timer first may lead to a race condition where the timer will fire before
+		// it is time to pop the timestamp off the front of the queue, then it will fire again
+		// shortly after.
+		requestTime := time.Now().Add(time.Second)
+		updateAnnounceVersionRequestTimestamps = append(updateAnnounceVersionRequestTimestamps, &requestTime)
+
+		// An empty request queue implies that the timer is stopped.
 		if len(updateAnnounceVersionRequestTimestamps) == 0 {
 			updateAnnounceVersionTimer.Reset(time.Second)
 		}
-
-		requestTime := time.Now().Add(time.Second)
-		updateAnnounceVersionRequestTimestamps = append(updateAnnounceVersionRequestTimestamps, &requestTime)
 	}
 
 	defer ph.loopWG.Done()
@@ -218,13 +222,15 @@ loop:
 		case addProxyNodes := <-ph.addProxies:
 			// Got command to add proxy nodes.
 			// Add any unseen proxies to the proxy set and add p2p static connections to them.
+			// When connection to the peer is actually established, the addProxyPeer channel will
+			// handle assignment of validators to this proxy.
 			for _, proxyNode := range addProxyNodes {
 				proxyID := proxyNode.InternalNode.ID()
 				if ph.ps.getProxy(proxyID) != nil {
 					logger.Debug("Proxy is already in the proxy set", "proxyNode", proxyNode, "proxyID", proxyID, "chan", "addProxies")
 					continue
 				}
-				log.Info("Adding proxy node", "proxyNode", proxyNode, "proxyID", proxyID)
+				ph.logger.Info("Adding proxy node", "proxyNode", proxyNode, "proxyID", proxyID)
 				ph.ps.addProxy(proxyNode)
 				ph.sb.AddPeer(proxyNode.InternalNode, p2p.ProxyPurpose)
 			}
@@ -301,29 +307,30 @@ loop:
 			// If it is, there is a bug in the code
 			if len(updateAnnounceVersionRequestTimestamps) == 0 {
 				logger.Error("updateAnnounceVersionRequestTimestamps is empty when updateAnnounceVersionTimer expired")
-			} else {
-				now := time.Now()
-				updateSent := false
-				numRequestToPop := 0
+				break
+			}
 
-				for _, minRequestTimestamp := range updateAnnounceVersionRequestTimestamps {
-					if minRequestTimestamp.Before(now) || minRequestTimestamp.Equal(now) {
-						if !updateSent {
-							ph.sb.UpdateAnnounceVersion()
-							updateSent = true
-						}
+			now := time.Now()
+			updateSent := false
+			numRequestToPop := 0
 
-						numRequestToPop++
-					} else {
-						// Update the timer to tick for the first entry of the requests
-						updateAnnounceVersionTimer.Reset(updateAnnounceVersionRequestTimestamps[0].Sub(now))
-						break
+			for _, minRequestTimestamp := range updateAnnounceVersionRequestTimestamps {
+				if minRequestTimestamp.Before(now) || minRequestTimestamp.Equal(now) {
+					if !updateSent {
+						ph.sb.UpdateAnnounceVersion()
+						updateSent = true
 					}
-				}
 
-				if numRequestToPop > 0 {
-					updateAnnounceVersionRequestTimestamps = updateAnnounceVersionRequestTimestamps[numRequestToPop:]
+					numRequestToPop++
+				} else {
+					// Update the timer to tick for the first entry later than now.
+					updateAnnounceVersionTimer.Reset(minRequestTimestamp.Sub(now))
+					break
 				}
+			}
+
+			if numRequestToPop > 0 {
+				updateAnnounceVersionRequestTimestamps = updateAnnounceVersionRequestTimestamps[numRequestToPop:]
 			}
 
 		case <-phEpochTicker.C:
@@ -334,42 +341,41 @@ loop:
 			if valsReassigned := ph.ps.unassignDisconnectedProxies(ph.proxyHandlerEpochLength); valsReassigned {
 				ph.sendValEnodeShareMsgs()
 				updateAnnounceVersionInFuture()
-			} else {
-				// This is the case if there were no changes the validator assignments at the end of `proxyHandlerEpochLength` seconds.
+				break
+			}
 
-				// Send out the val enode share message.  We will resend the valenodeshare message here in case it was
-				// never successfully sent before.
-				ph.sendValEnodeShareMsgs()
+			// Send out the val enode share message.  We will resend the valenodeshare message here in case it was
+			// never successfully sent before.
+			ph.sendValEnodeShareMsgs()
 
-				// Also resend the enode certificates to the proxies (via a forward message), in case it was
-				// never successfully sent before.
+			// Also resend the enode certificates to the proxies (via a forward message), in case it was
+			// never successfully sent before.
 
-				// Get all connected proxies
-				proxiesMap := ph.ps.getAllProxies()
-				proxyPeers := make([]consensus.Peer, 0, len(proxiesMap))
-				for _, proxy := range proxiesMap {
-					if proxy.peer != nil {
-						proxyPeers = append(proxyPeers, proxy.peer)
-					}
+			// Get all connected proxies
+			proxiesMap := ph.ps.getAllProxies()
+			proxyPeers := make([]consensus.Peer, 0, len(proxiesMap))
+			for _, proxy := range proxiesMap {
+				if proxy.peer != nil {
+					proxyPeers = append(proxyPeers, proxy.peer)
 				}
+			}
 
-				// Get the enode certificate messages
-				proxyEnodeCertMsgs := ph.sb.RetrieveEnodeCertificateMsgMap()
-				proxySpecificPayloads := make(map[enode.ID][]byte)
-				for proxyID, enodeCertMsg := range proxyEnodeCertMsgs {
-					payload, err := enodeCertMsg.Payload()
-					if err != nil {
-						logger.Warn("Error getting payload of enode certificate message", "err", err, "proxyID", proxyID)
-						continue
-					} else {
-						proxySpecificPayloads[proxyID] = payload
-					}
+			// Get the enode certificate messages
+			proxyEnodeCertMsgs := ph.sb.RetrieveEnodeCertificateMsgMap()
+			proxySpecificPayloads := make(map[enode.ID][]byte)
+			for proxyID, enodeCertMsg := range proxyEnodeCertMsgs {
+				payload, err := enodeCertMsg.Payload()
+				if err != nil {
+					logger.Warn("Error getting payload of enode certificate message", "err", err, "proxyID", proxyID)
+					continue
+				} else {
+					proxySpecificPayloads[proxyID] = payload
 				}
+			}
 
-				// Send the enode certificate messages to the proxies
-				if err := ph.pve.SendForwardMsg(proxyPeers, []common.Address{}, istanbul.EnodeCertificateMsg, nil, proxySpecificPayloads); err != nil {
-					logger.Error("Error in sharing the enode certificate message to the proxies", "error", err)
-				}
+			// Send the enode certificate messages to the proxies
+			if err := ph.pve.SendForwardMsg(proxyPeers, []common.Address{}, istanbul.EnodeCertificateMsg, nil, proxySpecificPayloads); err != nil {
+				logger.Error("Error in sharing the enode certificate message to the proxies", "error", err)
 			}
 
 		case <-ph.sendValEnodeShareMsgsCh:
@@ -381,7 +387,7 @@ loop:
 func (ph *proxyHandler) sendValEnodeShareMsgs() {
 	logger := ph.logger.New("func", "sendValEnodeShareMsgs")
 
-	for _, proxy := range ph.ps.proxiesByID {
+	for _, proxy := range ph.ps.getAllProxies() {
 		if proxy.peer != nil {
 			assignedValidators := ph.ps.getValidatorAssignments(nil, []enode.ID{proxy.ID()})
 			valAddresses := make([]common.Address, 0, len(assignedValidators))
@@ -396,7 +402,7 @@ func (ph *proxyHandler) sendValEnodeShareMsgs() {
 
 func (ph *proxyHandler) updateValidators() (bool, error) {
 	newVals, rmVals, err := ph.getValidatorConnSetDiff(ph.ps.getValidators())
-	log.Trace("Proxy Handler updating validators", "newVals", common.ConvertToStringSlice(newVals), "rmVals", common.ConvertToStringSlice(rmVals), "err", err, "func", "updateValiadtors")
+	ph.logger.Trace("Proxy Handler updating validators", "newVals", common.ConvertToStringSlice(newVals), "rmVals", common.ConvertToStringSlice(rmVals), "err", err, "func", "updateValiadtors")
 	if err != nil {
 		return false, err
 	}
@@ -429,13 +435,12 @@ func (ph *proxyHandler) getValidatorConnSetDiff(validators []common.Address) (ne
 	// Don't add this validator's address to the returned new validator set
 	delete(newValConnSet, ph.sb.Address())
 
+	// Log the returned validator connection set value.
 	outputNewValConnSet := make([]common.Address, 0, len(newValConnSet))
 	for newVal := range newValConnSet {
 		outputNewValConnSet = append(outputNewValConnSet, newVal)
 	}
-	logger.Trace("retrieved validator connset", "valConnSet", common.ConvertToStringSlice(outputNewValConnSet))
-
-	rmVals = make([]common.Address, 0) // There is a good chance that there will be no diff, so set size to 0
+	logger.Trace("Retrieved validator connset", "valConnSet", common.ConvertToStringSlice(outputNewValConnSet))
 
 	// First find all old val entries that are not in the newValConnSet (which will be the removed validator set),
 	// and find all the same val entries and remove them from the newValConnSet.
@@ -448,12 +453,14 @@ func (ph *proxyHandler) getValidatorConnSetDiff(validators []common.Address) (ne
 	}
 
 	// Whatever is remaining in the newValConnSet is the new validator set.
-	newVals = make([]common.Address, 0, len(newValConnSet))
-	for newVal := range newValConnSet {
-		newVals = append(newVals, newVal)
+	if len(newValConnSet) > 0 {
+		newVals = make([]common.Address, 0, len(newValConnSet))
+		for newVal := range newValConnSet {
+			newVals = append(newVals, newVal)
+		}
 	}
 
-	logger.Trace("returned diff", "newVals", common.ConvertToStringSlice(newVals), "rmVals", common.ConvertToStringSlice(rmVals))
+	logger.Trace("Returned validator connset diff", "newVals", common.ConvertToStringSlice(newVals), "rmVals", common.ConvertToStringSlice(rmVals))
 
 	return newVals, rmVals, nil
 }
