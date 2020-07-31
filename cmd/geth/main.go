@@ -420,6 +420,16 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		}
 	}
 
+	if ctx.GlobalBool(utils.ProxyFlag.Name) {
+		var ethereum *eth.Ethereum
+		if err := stack.Service(&ethereum); err != nil {
+			utils.Fatalf("Ethereum service not running: %v", err)
+		}
+		if err := ethereum.StartProxyEngine(); err != nil {
+			utils.Fatalf("Failed to start the proxy engine: %v", err)
+		}
+	}
+
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name) {
 		if ctx.GlobalBool(utils.ProxyFlag.Name) {

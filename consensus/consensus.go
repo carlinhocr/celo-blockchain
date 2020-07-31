@@ -189,6 +189,12 @@ type Istanbul interface {
 	// StopAnnouncing stops the announcing
 	StopAnnouncing() error
 
+	// StartProxyEngine starts a proxy's engine
+	StartProxyEngine() error
+
+	// StopProxyEnginer stops a proxy's engine
+	StopProxyEngine() error
+
 	// StartProxiedValidatorEngine starts the proxied validator engine
 	StartProxiedValidatorEngine() error
 

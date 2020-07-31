@@ -606,6 +606,30 @@ func (s *Ethereum) stopAnnounce() error {
 	return nil
 }
 
+func (s *Ethereum) StartProxyEngine() error {
+	if istanbul, ok := s.engine.(consensus.Istanbul); ok {
+		if istanbul.IsProxy() {
+			return istanbul.StartProxyEngine()
+		} else {
+			return proxy.ErrNodeNotProxy
+		}
+	}
+
+	return nil
+}
+
+func (s *Ethereum) StopProxyEngine() error {
+	if istanbul, ok := s.engine.(consensus.Istanbul); ok {
+		if istanbul.IsProxy() {
+			return istanbul.StopProxyEngine()
+		} else {
+			return proxy.ErrNodeNotProxy
+		}
+	}
+
+	return nil
+}
+
 func (s *Ethereum) IsMining() bool      { return s.miner.Mining() }
 func (s *Ethereum) Miner() *miner.Miner { return s.miner }
 

@@ -664,6 +664,16 @@ func (sb *Backend) StopAnnouncing() error {
 	return sb.vph.stopThread()
 }
 
+// StartProxyEngine starts a proxy's engine
+func (sb *Backend) StartProxyEngine() error {
+	return nil
+}
+
+// StopProxyEnginer stops a proxy's engine
+func (sb *Backend) StopProxyEngine() error {
+	return nil
+}
+
 // StartProxyHandler implements consensus.Istanbul.StartProxyEngine
 func (sb *Backend) StartProxiedValidatorEngine() error {
 	sb.proxiedValidatorEngineMu.Lock()
