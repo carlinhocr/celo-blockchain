@@ -17,6 +17,8 @@
 package proxy
 
 import (
+	"sync"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/istanbul"
@@ -64,6 +66,12 @@ type proxyEngine struct {
 	logger  log.Logger
 	backend BackendForProxyEngine
 
+	isRunning   bool
+	isRunningMu sync.RWMutex
+
+	loopWG sync.WaitGroup
+	quit   chan struct{} // Used to notify to the thread to quit
+
 	// Proxy's validator
 	// Right now, we assume that there is at most one proxied peer for a proxy
 	// Proxy's validator
@@ -87,14 +95,34 @@ func NewProxyEngine(backend BackendForProxyEngine, config *istanbul.Config) (Pro
 
 // Start starts the proxy engine.
 func (p *proxyEngine) Start() error {
-	logger := p.logger.New("func", "Start")
-	logger.Error("Starting proxy in engine")
+	p.isRunningMu.Lock()
+	defer p.isRunningMu.Unlock()
 
+	if p.isRunning {
+		return ErrStartedProxyEngine
+	}
+	p.loopWG.Add(1)
+	p.quit = make(chan struct{})
+
+	p.isRunning = true
+	p.logger.Warn("Proxy engine started")
 	return nil
 }
 
 // Stop stops the proxy engine.
 func (p *proxyEngine) Stop() error {
+	p.isRunningMu.Lock()
+	defer p.isRunningMu.Unlock()
+
+	if !p.isRunning {
+		return ErrStoppedProxyEngine
+	}
+
+	close(p.quit)
+	p.loopWG.Wait()
+
+	p.isRunning = false
+	p.logger.Warn("Proxy engine stopped")
 	return nil
 }
 
