@@ -85,6 +85,19 @@ func NewProxyEngine(backend BackendForProxyEngine, config *istanbul.Config) (Pro
 	return p, nil
 }
 
+// Start starts the proxy engine.
+func (p *proxyEngine) Start() error {
+	logger := p.logger.New("func", "Start")
+	logger.Error("Starting proxy in engine")
+
+	return nil
+}
+
+// Stop stops the proxy engine.
+func (p *proxyEngine) Stop() error {
+	return nil
+}
+
 func (p *proxyEngine) HandleMsg(peer consensus.Peer, msgCode uint64, payload []byte) (bool, error) {
 	if msgCode == istanbul.ValEnodesShareMsg {
 		return p.handleValEnodesShareMsg(peer, payload)

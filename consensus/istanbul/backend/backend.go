@@ -264,7 +264,9 @@ type Backend struct {
 	vph *validatorPeerHandler
 
 	// Handler for proxy related functionality
-	proxyEngine proxy.ProxyEngine
+	proxyEngine        proxy.ProxyEngine
+	proxyEngineRunning bool
+	proxyEngineMu      sync.RWMutex
 
 	// Handler for proxied validator related functionality
 	proxiedValidatorEngine        proxy.ProxiedValidatorEngine

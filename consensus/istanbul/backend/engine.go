@@ -27,6 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/istanbul"
 	istanbulCore "github.com/ethereum/go-ethereum/consensus/istanbul/core"
+	"github.com/ethereum/go-ethereum/consensus/istanbul/proxy"
 	"github.com/ethereum/go-ethereum/consensus/istanbul/validator"
 	gpm "github.com/ethereum/go-ethereum/contract_comm/gasprice_minimum"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -666,11 +667,35 @@ func (sb *Backend) StopAnnouncing() error {
 
 // StartProxyEngine starts a proxy's engine
 func (sb *Backend) StartProxyEngine() error {
+	sb.proxyEngineMu.Lock()
+	defer sb.proxyEngineMu.Unlock()
+
+	if sb.proxyEngineRunning {
+		return proxy.ErrStartedProxyEngine
+	}
+
+	if !sb.config.Proxy {
+		return proxy.ErrNodeNotProxy
+	}
+
+	sb.proxyEngine.Start()
+	sb.proxyEngineRunning = true
 	return nil
 }
 
 // StopProxyEnginer stops a proxy's engine
 func (sb *Backend) StopProxyEngine() error {
+	// TODO(joshua): This is not yet called.
+	sb.proxyEngineMu.Lock()
+	defer sb.proxyEngineMu.Unlock()
+
+	if !sb.proxyEngineRunning {
+		return proxy.ErrStoppedProxyEngine
+	}
+
+	sb.proxyEngine.Stop()
+	sb.proxyEngineRunning = false
+
 	return nil
 }
 
