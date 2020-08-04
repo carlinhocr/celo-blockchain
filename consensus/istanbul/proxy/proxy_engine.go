@@ -148,6 +148,8 @@ func (p *proxyEngine) HandleMsg(peer consensus.Peer, msgCode uint64, payload []b
 	return false, nil
 }
 
+// Note, this only needs to be implemented once we check incoming connections
+// against acceptable nodekeys / addresses
 func (p *proxyEngine) run() {
 	for {
 		select {
