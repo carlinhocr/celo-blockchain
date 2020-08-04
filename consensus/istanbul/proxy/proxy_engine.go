@@ -72,10 +72,13 @@ type proxyEngine struct {
 	loopWG sync.WaitGroup
 	quit   chan struct{} // Used to notify to the thread to quit
 
-	// Proxy's validator
-	// Right now, we assume that there is at most one proxied peer for a proxy
-	// Proxy's validator
+	addValidator    chan *enode.Node
+	removeValidator chan *enode.Node
+
+	// Legacy proxidValidator
 	proxiedValidator consensus.Peer
+	// Proxied Validators set
+	proxiedValidators map[consensus.Peer]bool
 }
 
 // New creates a new proxy engine.
@@ -88,6 +91,10 @@ func NewProxyEngine(backend BackendForProxyEngine, config *istanbul.Config) (Pro
 		config:  config,
 		logger:  log.New(),
 		backend: backend,
+
+		addValidator:      make(chan *enode.Node),
+		removeValidator:   make(chan *enode.Node),
+		proxiedValidators: make(map[consensus.Peer]bool),
 	}
 
 	return p, nil
@@ -142,13 +149,11 @@ func (p *proxyEngine) HandleMsg(peer consensus.Peer, msgCode uint64, payload []b
 
 func (p *proxyEngine) RegisterProxiedValidatorPeer(proxiedValidatorPeer consensus.Peer) {
 	// TODO: Does this need a lock?
-	p.proxiedValidator = proxiedValidatorPeer
+	p.proxiedValidators[proxiedValidatorPeer] = true
 }
 
 func (p *proxyEngine) UnregisterProxiedValidatorPeer(proxiedValidatorPeer consensus.Peer) {
-	if p.proxiedValidator != nil && proxiedValidatorPeer.Node().ID() == p.proxiedValidator.Node().ID() {
-		p.proxiedValidator = nil
-	}
+	delete(p.proxiedValidators, proxiedValidatorPeer)
 }
 
 func (p *proxyEngine) GetProxiedValidatorsInfo() ([]ProxiedValidatorInfo, error) {
