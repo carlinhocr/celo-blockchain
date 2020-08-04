@@ -73,8 +73,8 @@ func (p *proxyEngine) handleEnodeCertificateFromFwdMsg(payload []byte) error {
 	}
 
 	// Verify that the sender is from the proxied validator
-	if msg.Address != p.config.ProxiedValidatorAddress {
-		logger.Error("Unauthorized Enode Certificate message", "sender address", msg.Address, "authorized sender address", p.config.ProxiedValidatorAddress)
+	if _, ok := p.authorizedAddresses[msg.Address]; !ok {
+		logger.Error("Unauthorized Enode Certificte message", "sender address", msg.Address, "authorized sender addresses", p.authorizedAddresses)
 		return errUnauthorizedMessageFromProxiedValidator
 	}
 

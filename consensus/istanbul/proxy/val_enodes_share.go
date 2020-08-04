@@ -123,8 +123,8 @@ func (p *proxyEngine) handleValEnodesShareMsg(peer consensus.Peer, payload []byt
 	}
 
 	// Verify that the sender is from the proxied validator
-	if msg.Address != p.config.ProxiedValidatorAddress {
-		logger.Error("Unauthorized valEnodesShare message", "sender address", msg.Address, "authorized sender address", p.config.ProxiedValidatorAddress)
+	if _, ok := p.authorizedAddresses[msg.Address]; !ok {
+		logger.Error("Unauthorized valEnodesShare message", "sender address", msg.Address, "authorized sender address", p.authorizedAddresses)
 		return true, errUnauthorizedMessageFromProxiedValidator
 	}
 

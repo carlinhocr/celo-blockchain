@@ -78,8 +78,9 @@ type proxyEngine struct {
 
 	// Legacy proxidValidator
 	proxiedValidator consensus.Peer
-	// Proxied Validators set
-	proxiedValidators map[consensus.Peer]bool
+	// Proxied Validators set and count of authorized addresses
+	proxiedValidators   map[consensus.Peer]bool
+	authorizedAddresses map[common.Address]int
 }
 
 // New creates a new proxy engine.
@@ -162,10 +163,19 @@ func (p *proxyEngine) run() {
 // Callback once validator dials us and is properly registered.
 func (p *proxyEngine) RegisterProxiedValidatorPeer(proxiedValidatorPeer consensus.Peer) {
 	// TODO: Does this need a lock?
+	pubKey := proxiedValidatorPeer.Node().Pubkey()
+	addr := crypto.PubkeyToAddress(*pubKey)
+	p.authorizedAddresses[addr] = p.authorizedAddresses[addr] + 1
 	p.proxiedValidators[proxiedValidatorPeer] = true
 }
 
 func (p *proxyEngine) UnregisterProxiedValidatorPeer(proxiedValidatorPeer consensus.Peer) {
+	pubKey := proxiedValidatorPeer.Node().Pubkey()
+	addr := crypto.PubkeyToAddress(*pubKey)
+	p.authorizedAddresses[addr] = p.authorizedAddresses[addr] - 1
+	if p.authorizedAddresses[addr] == 0 {
+		delete(p.authorizedAddresses, addr)
+	}
 	delete(p.proxiedValidators, proxiedValidatorPeer)
 }
 
