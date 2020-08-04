@@ -76,8 +76,6 @@ type proxyEngine struct {
 	addValidator    chan *enode.Node
 	removeValidator chan *enode.Node
 
-	// Legacy proxidValidator
-	proxiedValidator consensus.Peer
 	// Proxied Validators set and count of authorized addresses
 	proxiedValidators   map[consensus.Peer]bool
 	authorizedAddresses map[common.Address]int

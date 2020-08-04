@@ -40,10 +40,10 @@ func (p *proxyEngine) handleConsensusMsg(peer consensus.Peer, payload []byte) (b
 		return true, istanbul.ErrUnauthorizedAddress
 	}
 
-	// Need to forward the message to the proxied validator
-	logger.Trace("Forwarding consensus message to proxied validator", "from", peer.Node().ID())
-	if p.proxiedValidator != nil {
-		p.backend.Unicast(p.proxiedValidator, payload, istanbul.ConsensusMsg)
+	// Need to forward the message to the proxied validators
+	logger.Trace("Forwarding consensus message to proxied validators", "from", peer.Node().ID())
+	for proxiedValidator := range p.proxiedValidators {
+		p.backend.Unicast(proxiedValidator, payload, istanbul.ConsensusMsg)
 	}
 
 	return true, nil
