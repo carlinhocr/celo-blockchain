@@ -85,7 +85,7 @@ type ProxyEngine interface {
 	// SendMsgToProxiedValidator will send the `celo` message to the proxied validator.
 	SendMsgToProxiedValidator(msgCode uint64, msg *istanbul.Message) error
 
-	// GetProxiedValidatorsInfo will return information about the proxied validator.
+	// GetProxiedValidatorsInfo will return information about the proxied validators.
 	GetProxiedValidatorsInfo() ([]ProxiedValidatorInfo, error)
 }
 

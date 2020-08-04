@@ -22,6 +22,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/istanbul"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 )
@@ -157,14 +158,16 @@ func (p *proxyEngine) UnregisterProxiedValidatorPeer(proxiedValidatorPeer consen
 }
 
 func (p *proxyEngine) GetProxiedValidatorsInfo() ([]ProxiedValidatorInfo, error) {
-	if p.proxiedValidator != nil {
-		proxiedValidatorInfo := ProxiedValidatorInfo{Address: p.config.ProxiedValidatorAddress,
+	var proxiedValidatorsInfo []ProxiedValidatorInfo
+	for proxiedValidatorPeer := range p.proxiedValidators {
+		pubKey := proxiedValidatorPeer.Node().Pubkey()
+		proxiedValidatorInfo := ProxiedValidatorInfo{
+			Address:  crypto.PubkeyToAddress(*pubKey),
 			IsPeered: true,
-			Node:     p.proxiedValidator.Node()}
-		return []ProxiedValidatorInfo{proxiedValidatorInfo}, nil
-	} else {
-		return []ProxiedValidatorInfo{}, nil
+			Node:     proxiedValidatorPeer.Node()}
+		proxiedValidatorsInfo = append(proxiedValidatorsInfo, proxiedValidatorInfo)
 	}
+	return proxiedValidatorsInfo, nil
 }
 
 // SendMsgToProxiedValidator will send a `celo` message to the proxied validator.
