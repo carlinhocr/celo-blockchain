@@ -432,7 +432,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	}
 
 	// Start auxiliary services if enabled
-	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name) {
+	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.IstanbulValidatorFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name) {
 		if ctx.GlobalBool(utils.ProxyFlag.Name) {
 			utils.Fatalf("Proxies can't mine")
 		}
@@ -452,8 +452,11 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		if ctx.GlobalIsSet(utils.MinerThreadsFlag.Name) {
 			threads = ctx.GlobalInt(utils.MinerThreadsFlag.Name)
 		}
-		if err := ethereum.StartMining(threads); err != nil {
-			utils.Fatalf("Failed to start mining: %v", err)
+		// Don't start minig if just validator
+		if ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name) {
+			if err := ethereum.StartMining(threads); err != nil {
+				utils.Fatalf("Failed to start mining: %v", err)
+			}
 		}
 		// Start the proxy handler if this is a node is proxied and "mining"
 		if ctx.GlobalBool(utils.ProxiedFlag.Name) {
