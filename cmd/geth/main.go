@@ -432,7 +432,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	}
 
 	// Start auxiliary services if enabled
-	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name) {
+	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.IstanbulValidatorFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name) {
 		if ctx.GlobalBool(utils.ProxyFlag.Name) {
 			utils.Fatalf("Proxies can't mine")
 		}
@@ -452,14 +452,17 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		if ctx.GlobalIsSet(utils.MinerThreadsFlag.Name) {
 			threads = ctx.GlobalInt(utils.MinerThreadsFlag.Name)
 		}
-		if err := ethereum.StartMining(threads); err != nil {
-			utils.Fatalf("Failed to start mining: %v", err)
-		}
-		// Start the proxy handler if this is a node is proxied and "mining"
+		// Start the proxy handler if this is a node is proxied and a validator
 		if ctx.GlobalBool(utils.ProxiedFlag.Name) {
 			if err := ethereum.StartProxiedValidatorEngine(); err != nil {
 				utils.Fatalf("Failed to start the proxy engine: %v", err)
 			}
+		}
+	}
+	// Set up validators to mine, but don't start unless explicitly a validator
+	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name) {
+		if err := ethereum.StartMining(threads); err != nil {
+			utils.Fatalf("Failed to start mining: %v", err)
 		}
 	}
 	if !ctx.GlobalBool(utils.VersionCheckFlag.Name) {
