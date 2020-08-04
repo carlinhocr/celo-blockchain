@@ -159,6 +159,7 @@ func (p *proxyEngine) run() {
 	}
 }
 
+// Callback once validator dials us and is properly registered.
 func (p *proxyEngine) RegisterProxiedValidatorPeer(proxiedValidatorPeer consensus.Peer) {
 	// TODO: Does this need a lock?
 	p.proxiedValidators[proxiedValidatorPeer] = true
