@@ -707,6 +707,7 @@ func (s *Ethereum) Stop() error {
 		s.lesServer.Stop()
 	}
 	s.stopAnnounce()
+	s.StopProxyEngine()
 	s.txPool.Stop()
 	s.miner.Stop()
 	s.eventMux.Stop()

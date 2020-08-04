@@ -151,13 +151,15 @@ func (p *proxyEngine) HandleMsg(peer consensus.Peer, msgCode uint64, payload []b
 // Note, this only needs to be implemented once we check incoming connections
 // against acceptable nodekeys / addresses
 func (p *proxyEngine) run() {
+	defer p.loopWG.Done()
 	for {
 		select {
 		case <-p.quit:
 			// The proxy engine was stopped
-			break
+			return
 		}
 	}
+	p.logger.Warn("Leaving proxyEngine.run")
 }
 
 // Callback once validator dials us and is properly registered.
