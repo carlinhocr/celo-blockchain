@@ -111,6 +111,7 @@ func (p *proxyEngine) Start() error {
 	}
 	p.loopWG.Add(1)
 	p.quit = make(chan struct{})
+	go p.run()
 
 	p.isRunning = true
 	p.logger.Warn("Proxy engine started")
@@ -146,6 +147,16 @@ func (p *proxyEngine) HandleMsg(peer consensus.Peer, msgCode uint64, payload []b
 	}
 
 	return false, nil
+}
+
+func (p *proxyEngine) run() {
+	for {
+		select {
+		case <-p.quit:
+			// The proxy engine was stopped
+			break
+		}
+	}
 }
 
 func (p *proxyEngine) RegisterProxiedValidatorPeer(proxiedValidatorPeer consensus.Peer) {
