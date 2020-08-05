@@ -170,7 +170,7 @@ func (p *proxyEngine) RegisterProxiedValidatorPeer(proxiedValidatorPeer consensu
 	pubKey := proxiedValidatorPeer.Node().Pubkey()
 	addr := crypto.PubkeyToAddress(*pubKey)
 	logger := p.logger.New("func", "RegisterProxiedValidatorPeer")
-	logger.warn("Adding validator", "addr", addr, "enode", proxiedValidatorPeer.Node())
+	logger.Warn("Adding validator", "addr", addr, "enode", proxiedValidatorPeer.Node())
 	p.authorizedAddresses[addr] = p.authorizedAddresses[addr] + 1
 	p.proxiedValidators[proxiedValidatorPeer] = true
 }
