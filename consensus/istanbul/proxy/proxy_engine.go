@@ -92,9 +92,11 @@ func NewProxyEngine(backend BackendForProxyEngine, config *istanbul.Config) (Pro
 		logger:  log.New(),
 		backend: backend,
 
-		addValidator:      make(chan *enode.Node),
-		removeValidator:   make(chan *enode.Node),
-		proxiedValidators: make(map[consensus.Peer]bool),
+		addValidator:    make(chan *enode.Node),
+		removeValidator: make(chan *enode.Node),
+
+		proxiedValidators:   make(map[consensus.Peer]bool),
+		authorizedAddresses: make(map[common.Address]int),
 	}
 
 	return p, nil
