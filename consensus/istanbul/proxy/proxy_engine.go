@@ -169,6 +169,8 @@ func (p *proxyEngine) RegisterProxiedValidatorPeer(proxiedValidatorPeer consensu
 	// TODO: Does this need a lock?
 	pubKey := proxiedValidatorPeer.Node().Pubkey()
 	addr := crypto.PubkeyToAddress(*pubKey)
+	logger := p.logger.New("func", "RegisterProxiedValidatorPeer")
+	logger.warn("Adding validator", "addr", addr, "enode", proxiedValidatorPeer.Node())
 	p.authorizedAddresses[addr] = p.authorizedAddresses[addr] + 1
 	p.proxiedValidators[proxiedValidatorPeer] = true
 }
@@ -187,8 +189,9 @@ func (p *proxyEngine) GetProxiedValidatorsInfo() ([]ProxiedValidatorInfo, error)
 	var proxiedValidatorsInfo []ProxiedValidatorInfo
 	for proxiedValidatorPeer := range p.proxiedValidators {
 		pubKey := proxiedValidatorPeer.Node().Pubkey()
+		addr := crypto.PubkeyToAddress(*pubKey)
 		proxiedValidatorInfo := ProxiedValidatorInfo{
-			Address:  crypto.PubkeyToAddress(*pubKey),
+			Address:  addr,
 			IsPeered: true,
 			Node:     proxiedValidatorPeer.Node()}
 		proxiedValidatorsInfo = append(proxiedValidatorsInfo, proxiedValidatorInfo)
