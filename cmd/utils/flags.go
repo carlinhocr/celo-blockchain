@@ -1486,7 +1486,7 @@ func SetProxyConfig(ctx *cli.Context, nodeCfg *node.Config, ethCfg *eth.Config) 
 		ethCfg.Istanbul.Proxied = ctx.GlobalBool(ProxiedFlag.Name)
 
 		// Validator or Mining must be set for proxied nodes
-		if !ctx.GlobalIsSet(IstanbulValidatorFlag.Name) && !ctx.GlobalIsSet(MiningEnabledFlag.Name) {
+		if !(ctx.GlobalIsSet(IstanbulValidatorFlag.Name) || ctx.GlobalIsSet(MiningEnabledFlag.Name)) {
 			Fatalf("Option --%s or --%s must be used if option --%s is used", IstanbulValidatorFlag.Name, MiningEnabledFlag.Name, ProxiedFlag.Name)
 		}
 
