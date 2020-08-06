@@ -188,7 +188,7 @@ func (p *proxyEngine) UnregisterProxiedValidatorPeer(proxiedValidatorPeer consen
 }
 
 func (p *proxyEngine) GetProxiedValidatorsInfo() ([]ProxiedValidatorInfo, error) {
-	var proxiedValidatorsInfo []ProxiedValidatorInfo
+	proxiedValidatorsInfo := []ProxiedValidatorInfo{}
 	for proxiedValidatorPeer := range p.proxiedValidators {
 		pubKey := proxiedValidatorPeer.Node().Pubkey()
 		addr := crypto.PubkeyToAddress(*pubKey)
