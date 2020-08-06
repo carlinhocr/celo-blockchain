@@ -92,9 +92,11 @@ func NewProxyEngine(backend BackendForProxyEngine, config *istanbul.Config) (Pro
 		logger:  log.New(),
 		backend: backend,
 
-		addValidator:      make(chan *enode.Node),
-		removeValidator:   make(chan *enode.Node),
-		proxiedValidators: make(map[consensus.Peer]bool),
+		addValidator:    make(chan *enode.Node),
+		removeValidator: make(chan *enode.Node),
+
+		proxiedValidators:   make(map[consensus.Peer]bool),
+		authorizedAddresses: make(map[common.Address]int),
 	}
 
 	return p, nil
@@ -167,6 +169,8 @@ func (p *proxyEngine) RegisterProxiedValidatorPeer(proxiedValidatorPeer consensu
 	// TODO: Does this need a lock?
 	pubKey := proxiedValidatorPeer.Node().Pubkey()
 	addr := crypto.PubkeyToAddress(*pubKey)
+	logger := p.logger.New("func", "RegisterProxiedValidatorPeer")
+	logger.Warn("Adding validator", "addr", addr, "ID", proxiedValidatorPeer.Node().ID(), "enode", proxiedValidatorPeer.Node())
 	p.authorizedAddresses[addr] = p.authorizedAddresses[addr] + 1
 	p.proxiedValidators[proxiedValidatorPeer] = true
 }
@@ -174,6 +178,8 @@ func (p *proxyEngine) RegisterProxiedValidatorPeer(proxiedValidatorPeer consensu
 func (p *proxyEngine) UnregisterProxiedValidatorPeer(proxiedValidatorPeer consensus.Peer) {
 	pubKey := proxiedValidatorPeer.Node().Pubkey()
 	addr := crypto.PubkeyToAddress(*pubKey)
+	logger := p.logger.New("func", "UnregisterProxiedValidatorPeer")
+	logger.Warn("Removing validator", "addr", addr, "enode", proxiedValidatorPeer.Node())
 	p.authorizedAddresses[addr] = p.authorizedAddresses[addr] - 1
 	if p.authorizedAddresses[addr] == 0 {
 		delete(p.authorizedAddresses, addr)
@@ -182,11 +188,12 @@ func (p *proxyEngine) UnregisterProxiedValidatorPeer(proxiedValidatorPeer consen
 }
 
 func (p *proxyEngine) GetProxiedValidatorsInfo() ([]ProxiedValidatorInfo, error) {
-	var proxiedValidatorsInfo []ProxiedValidatorInfo
+	proxiedValidatorsInfo := []ProxiedValidatorInfo{}
 	for proxiedValidatorPeer := range p.proxiedValidators {
 		pubKey := proxiedValidatorPeer.Node().Pubkey()
+		addr := crypto.PubkeyToAddress(*pubKey)
 		proxiedValidatorInfo := ProxiedValidatorInfo{
-			Address:  crypto.PubkeyToAddress(*pubKey),
+			Address:  addr,
 			IsPeered: true,
 			Node:     proxiedValidatorPeer.Node()}
 		proxiedValidatorsInfo = append(proxiedValidatorsInfo, proxiedValidatorInfo)
