@@ -45,10 +45,7 @@ func (sb *Backend) HandleMsg(addr common.Address, msg p2p.Msg, peer consensus.Pe
 	logger := sb.logger.New("func", "HandleMsg")
 
 	if istanbul.IsIstanbulMsg(msg) {
-		// Only a running validator or proxy should handle consensus messages
-		if (msg.Code == istanbul.ConsensusMsg) && (!sb.IsValidating() && !sb.IsProxy()) {
-			return true, istanbul.ErrStoppedEngine
-		}
+		// Let non mining validators handle certain messages
 
 		var data []byte
 		if err := msg.Decode(&data); err != nil {
