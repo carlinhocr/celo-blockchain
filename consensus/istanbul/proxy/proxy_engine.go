@@ -170,7 +170,7 @@ func (p *proxyEngine) RegisterProxiedValidatorPeer(proxiedValidatorPeer consensu
 	pubKey := proxiedValidatorPeer.Node().Pubkey()
 	addr := crypto.PubkeyToAddress(*pubKey)
 	logger := p.logger.New("func", "RegisterProxiedValidatorPeer")
-	logger.Warn("Adding validator", "addr", addr, "enode", proxiedValidatorPeer.Node())
+	logger.Warn("Adding validator", "addr", addr, "ID", proxiedValidatorPeer.Node().ID(), "enode", proxiedValidatorPeer.Node())
 	p.authorizedAddresses[addr] = p.authorizedAddresses[addr] + 1
 	p.proxiedValidators[proxiedValidatorPeer] = true
 }
@@ -178,6 +178,8 @@ func (p *proxyEngine) RegisterProxiedValidatorPeer(proxiedValidatorPeer consensu
 func (p *proxyEngine) UnregisterProxiedValidatorPeer(proxiedValidatorPeer consensus.Peer) {
 	pubKey := proxiedValidatorPeer.Node().Pubkey()
 	addr := crypto.PubkeyToAddress(*pubKey)
+	logger := p.logger.New("func", "UnregisterProxiedValidatorPeer")
+	logger.Warn("Removing validator", "addr", addr, "enode", proxiedValidatorPeer.Node())
 	p.authorizedAddresses[addr] = p.authorizedAddresses[addr] - 1
 	if p.authorizedAddresses[addr] == 0 {
 		delete(p.authorizedAddresses, addr)
