@@ -1288,7 +1288,7 @@ func (sb *Backend) handleEnodeCertificateMsg(peer consensus.Peer, payload []byte
 	}
 
 	// Ensure this node is a validator in the validator conn set
-	shouldSave, err := sb.shouldSaveAndPublishValEnodeURLs()
+	_, err = sb.shouldSaveAndPublishValEnodeURLs()
 	if err != nil {
 		logger.Error("Error checking if should save received validator enode url", "err", err)
 		return err
