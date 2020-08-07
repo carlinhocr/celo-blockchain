@@ -27,7 +27,7 @@ func (p *proxyEngine) handleConsensusMsg(peer consensus.Peer, payload []byte) (b
 	logger := p.logger.New("func", "handleConsensusMsg")
 
 	// Verify that this message is not from the proxied validator
-	if p.proxiedValidator != nil && peer.Node().ID() == p.proxiedValidator.Node().ID() {
+	if ok := p.proxiedValidators[peer]; ok {
 		logger.Warn("Got a consensus message from the proxied validator. Ignoring it", "from", peer.Node().ID())
 		return false, nil
 	}
@@ -40,10 +40,10 @@ func (p *proxyEngine) handleConsensusMsg(peer consensus.Peer, payload []byte) (b
 		return true, istanbul.ErrUnauthorizedAddress
 	}
 
-	// Need to forward the message to the proxied validator
-	logger.Trace("Forwarding consensus message to proxied validator", "from", peer.Node().ID())
-	if p.proxiedValidator != nil {
-		p.backend.Unicast(p.proxiedValidator, payload, istanbul.ConsensusMsg)
+	// Need to forward the message to the proxied validators
+	logger.Trace("Forwarding consensus message to proxied validators", "from", peer.Node().ID())
+	for proxiedValidator := range p.proxiedValidators {
+		p.backend.Unicast(proxiedValidator, payload, istanbul.ConsensusMsg)
 	}
 
 	return true, nil

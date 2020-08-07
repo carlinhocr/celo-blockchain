@@ -109,7 +109,7 @@ func (p *proxyEngine) handleValEnodesShareMsg(peer consensus.Peer, payload []byt
 	logger.Trace("Handling an Istanbul Validator Enodes Share message")
 
 	// Verify that it's coming from the proxied peer
-	if p.proxiedValidator == nil || p.proxiedValidator.Node().ID() != peer.Node().ID() {
+	if ok := p.proxiedValidators[peer]; !ok {
 		logger.Warn("Got a valEnodesShare message from a peer that is not the proxy's proxied validator. Ignoring it", "from", peer.Node().ID())
 		return false, nil
 	}

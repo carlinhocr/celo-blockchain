@@ -33,7 +33,7 @@ func (p *proxyEngine) handleEnodeCertificateMsg(peer consensus.Peer, payload []b
 	logger := p.logger.New("func", "handleEnodeCertificateMsg")
 
 	// Verify that this message is not from the proxied validator
-	if p.proxiedValidator != nil && peer.Node().ID() == p.proxiedValidator.Node().ID() {
+	if ok := p.proxiedValidators[peer]; ok {
 		logger.Warn("Got a enodeCertficate message from the proxied validator. Ignoring it", "from", peer.Node().ID())
 		return false, nil
 	}
@@ -47,10 +47,10 @@ func (p *proxyEngine) handleEnodeCertificateMsg(peer consensus.Peer, payload []b
 		return true, istanbul.ErrUnauthorizedAddress
 	}
 
-	// Need to forward the message to the proxied validator
-	logger.Trace("Forwarding consensus message to proxied validator", "from", peer.Node().ID())
-	if p.proxiedValidator != nil {
-		p.backend.Unicast(p.proxiedValidator, payload, istanbul.EnodeCertificateMsg)
+	// Need to forward the message to the proxied validators
+	logger.Trace("Forwarding consensus message to proxied validators", "from", peer.Node().ID())
+	for proxiedValidator := range p.proxiedValidators {
+		p.backend.Unicast(proxiedValidator, payload, istanbul.ConsensusMsg)
 	}
 
 	// We could add an optimization here where the proxy will save thie enodeCertificate in it's own valEnodeTable.
