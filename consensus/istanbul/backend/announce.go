@@ -1293,7 +1293,8 @@ func (sb *Backend) handleEnodeCertificateMsg(peer consensus.Peer, payload []byte
 		logger.Error("Error checking if should save received validator enode url", "err", err)
 		return err
 	}
-	if !shouldSave {
+	// TODO(Joshua): Is this notion of being a validator correct?
+	if !sb.IsValidator() {
 		logger.Debug("This node should not save validator enode urls, ignoring enodeCertificate")
 		return nil
 	}
