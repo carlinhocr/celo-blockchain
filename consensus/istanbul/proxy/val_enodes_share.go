@@ -77,6 +77,7 @@ func (pv *proxiedValidatorEngine) sendValEnodesShareMsg(proxyPeer consensus.Peer
 	logger := pv.logger.New("func", "sendValEnodesShareMsg")
 
 	if !pv.backend.IsValidating() {
+		logger.Info("Skipping sending ValEnodesShareMsg b/c not validating")
 		return errors.New("Not validating")
 	}
 
