@@ -161,7 +161,6 @@ func (p *proxyEngine) run() {
 			return
 		}
 	}
-	p.logger.Warn("Leaving proxyEngine.run")
 }
 
 // Callback once validator dials us and is properly registered.
