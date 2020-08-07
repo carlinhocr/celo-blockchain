@@ -54,7 +54,7 @@ func (sb *Backend) Multicast(destAddresses []common.Address, payload []byte, eth
 		if err != nil {
 			return err
 		}
-
+		// TODO(Joshua): Another hook point for IsValidating?
 		if err := sb.proxiedValidatorEngine.SendForwardMsg(proxies, destAddresses, ethMsgCode, payload); err != nil {
 			return err
 		}
