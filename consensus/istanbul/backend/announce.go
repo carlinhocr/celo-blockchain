@@ -1315,7 +1315,7 @@ func (sb *Backend) handleEnodeCertificateMsg(peer consensus.Peer, payload []byte
 	}
 
 	// TODO(joshua): Add if validating here as well?
-	if sb.IsProxiedValidator() {
+	if sb.IsProxiedValidator() && sb.IsValidating() {
 		// Send a valEnodesShare message to the proxy
 		sb.proxiedValidatorEngine.SendValEnodesShareMsgToAllProxies()
 	}
