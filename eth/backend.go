@@ -90,6 +90,12 @@ type Ethereum struct {
 
 	APIBackend *EthAPIBackend
 
+	// Manage future start/stops
+	waitToChange  bool // If we are waiting to start/stop on a block
+	changeBlock   int  // Which block to change on
+	changeToStart bool // True => waiting on start, false => waiting on stop
+	quitWait      chan struct{}
+
 	miner          *miner.Miner
 	gasPrice       *big.Int
 	gatewayFee     *big.Int
@@ -495,6 +501,13 @@ func (s *Ethereum) SetTxFeeRecipient(txFeeRecipient common.Address) {
 // is already running, this method adjust the number of threads allowed to use
 // and updates the minimum price required by the transaction pool.
 func (s *Ethereum) StartMining(threads int) error {
+	// Stop any wait attempt in progress
+	s.lock.Lock()
+	if s.waitToChange {
+		s.waitToChange = false
+		close(s.quitWait)
+	}
+	s.lock.Unlock()
 	// Update the thread count within the consensus engine
 	type threaded interface {
 		SetThreads(threads int)
@@ -564,6 +577,13 @@ func (s *Ethereum) StartMining(threads int) error {
 // StopMining terminates the miner, both at the consensus engine level as well as
 // at the block creation level.
 func (s *Ethereum) StopMining() {
+	// Stop any wait attempt in progress
+	s.lock.Lock()
+	if s.waitToChange {
+		s.waitToChange = false
+		close(s.quitWait)
+	}
+	s.lock.Unlock()
 	// Update the thread count within the consensus engine
 	type threaded interface {
 		SetThreads(threads int)
@@ -573,6 +593,83 @@ func (s *Ethereum) StopMining() {
 	}
 	// Stop the block creating itself
 	s.miner.Stop()
+}
+
+// StartMiningAtBlock starts the miner with the given number of CPU threads
+// at the given block. If mining is started, this does nothing. If a previous
+// Start/StopAtBlock has been called, this takes priority
+func (s *Ethereum) StartMiningAtBlock(threads, blockNumber int) {
+	// Stop any wait attempt in progress
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	if s.waitToChange {
+		close(s.quitWait)
+	}
+	s.quitWait = make(chan struct{})
+	s.waitToChange = true
+	s.changeToStart = true
+	s.changeBlock = blockNumber
+
+	chainHeadCh := make(chan core.ChainHeadEvent, 10)
+	chainHeadSub := s.blockchain.SubscribeChainHeadEvent(chainHeadCh)
+
+	go func() {
+		defer chainHeadSub.Unsubscribe()
+		for {
+			select {
+			case <-s.quitWait:
+				return
+			case chainHeadEvent := <-chainHeadCh:
+				if chainHeadEvent.Block.NumberU64() == uint64(blockNumber) {
+					s.StartMining(threads)
+				}
+				return
+			case err := <-chainHeadSub.Err():
+				log.Error("Error in StartMiningAtBlock subscription to the blockchain's chainhead event", "err", err)
+			}
+			return
+		}
+	}()
+}
+
+// StopMiningAtBlock stops the miner at the given block.
+// If mining is started, this does nothing. If a previous
+// Start/StopAtBlock has been called, this takes priority
+func (s *Ethereum) StopMiningAtBlock(threads, blockNumber int) {
+	// TODO: return error if not mining
+	// Stop any wait attempt in progress
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	if s.waitToChange {
+		close(s.quitWait)
+	}
+	s.quitWait = make(chan struct{})
+	s.waitToChange = true
+	s.changeToStart = false
+	s.changeBlock = blockNumber
+
+	chainHeadCh := make(chan core.ChainHeadEvent, 10)
+	chainHeadSub := s.blockchain.SubscribeChainHeadEvent(chainHeadCh)
+
+	go func() {
+		defer chainHeadSub.Unsubscribe()
+		for {
+			select {
+			case <-s.quitWait:
+				return // cancelled
+			case chainHeadEvent := <-chainHeadCh:
+				if chainHeadEvent.Block.NumberU64() == uint64(blockNumber) {
+					s.StopMining()
+					return
+				}
+			case err := <-chainHeadSub.Err():
+				log.Error("Error in StartMiningAtBlock subscription to the blockchain's chainhead event", "err", err)
+				return
+			}
+		}
+	}()
 }
 
 func (s *Ethereum) startAnnounce() error {
