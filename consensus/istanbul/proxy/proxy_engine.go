@@ -17,6 +17,8 @@
 package proxy
 
 import (
+	"sync"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/istanbul"
@@ -65,6 +67,15 @@ type proxyEngine struct {
 	logger  log.Logger
 	backend BackendForProxyEngine
 
+	isRunning   bool
+	isRunningMu sync.RWMutex
+
+	loopWG sync.WaitGroup
+	quit   chan struct{} // Used to notify to the thread to quit
+
+	addValidator    chan *enode.Node
+	removeValidator chan *enode.Node
+
 	// Proxied Validators set and count of authorized addresses
 	proxiedValidators   map[consensus.Peer]bool
 	authorizedAddresses map[common.Address]int
@@ -81,11 +92,48 @@ func NewProxyEngine(backend BackendForProxyEngine, config *istanbul.Config) (Pro
 		logger:  log.New(),
 		backend: backend,
 
+		addValidator:    make(chan *enode.Node),
+		removeValidator: make(chan *enode.Node),
+
 		proxiedValidators:   make(map[consensus.Peer]bool),
 		authorizedAddresses: make(map[common.Address]int),
 	}
 
 	return p, nil
+}
+
+// Start starts the proxy engine.
+func (p *proxyEngine) Start() error {
+	p.isRunningMu.Lock()
+	defer p.isRunningMu.Unlock()
+
+	if p.isRunning {
+		return ErrStartedProxyEngine
+	}
+	p.loopWG.Add(1)
+	p.quit = make(chan struct{})
+	go p.run()
+
+	p.isRunning = true
+	p.logger.Warn("Proxy engine started")
+	return nil
+}
+
+// Stop stops the proxy engine.
+func (p *proxyEngine) Stop() error {
+	p.isRunningMu.Lock()
+	defer p.isRunningMu.Unlock()
+
+	if !p.isRunning {
+		return ErrStoppedProxyEngine
+	}
+
+	close(p.quit)
+	p.loopWG.Wait()
+
+	p.isRunning = false
+	p.logger.Warn("Proxy engine stopped")
+	return nil
 }
 
 func (p *proxyEngine) HandleMsg(peer consensus.Peer, msgCode uint64, payload []byte) (bool, error) {
@@ -102,6 +150,20 @@ func (p *proxyEngine) HandleMsg(peer consensus.Peer, msgCode uint64, payload []b
 	return false, nil
 }
 
+// Note, this only needs to be implemented once we check incoming connections
+// against acceptable nodekeys / addresses
+func (p *proxyEngine) run() {
+	defer p.loopWG.Done()
+	for {
+		select {
+		case <-p.quit:
+			// The proxy engine was stopped
+			return
+		}
+	}
+}
+
+// Callback once validator dials us and is properly registered.
 func (p *proxyEngine) RegisterProxiedValidatorPeer(proxiedValidatorPeer consensus.Peer) {
 	// TODO: Does this need a lock?
 	pubKey := proxiedValidatorPeer.Node().Pubkey()
@@ -117,7 +179,6 @@ func (p *proxyEngine) UnregisterProxiedValidatorPeer(proxiedValidatorPeer consen
 	addr := crypto.PubkeyToAddress(*pubKey)
 	logger := p.logger.New("func", "UnregisterProxiedValidatorPeer")
 	logger.Warn("Removing validator", "addr", addr, "enode", proxiedValidatorPeer.Node())
-
 	p.authorizedAddresses[addr] = p.authorizedAddresses[addr] - 1
 	if p.authorizedAddresses[addr] == 0 {
 		delete(p.authorizedAddresses, addr)

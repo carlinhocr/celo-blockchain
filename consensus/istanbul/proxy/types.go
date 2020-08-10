@@ -44,6 +44,12 @@ var (
 	// ErrStartedProxyHandler is returned if proxy handler is already started
 	ErrStartedProxyHandler = errors.New("started proxy handler")
 
+	// ErrStoppedProxyEngine is returned if a prxoy engine is already stopped
+	ErrStoppedProxyEngine = errors.New("stopped proxy engine")
+
+	// ErrStartedProxyEngine is returned if a prxoy engine is already started
+	ErrStartedProxyEngine = errors.New("started proxy engine")
+
 	// ErrNodeNotProxiedValidator is returned if this node is not a proxied validator
 	ErrNodeNotProxiedValidator = errors.New("node not a proxied validator")
 
@@ -52,6 +58,12 @@ var (
 )
 
 type ProxyEngine interface {
+	// Start will start the proxy engine. Specifically, it will start the proxy engine thread.
+	Start() error
+
+	// Stop will stop the proxy engine. Specifically, it will stop the proxy engine thread.
+	Stop() error
+
 	// HandleMsg is the `celo` subprotocol message handler for proxies.
 	HandleMsg(peer consensus.Peer, msgCode uint64, payload []byte) (bool, error)
 

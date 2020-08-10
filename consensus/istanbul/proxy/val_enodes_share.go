@@ -18,6 +18,7 @@ package proxy
 
 import (
 	"encoding/hex"
+	"errors"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
@@ -75,6 +76,11 @@ func (pv *proxiedValidatorEngine) generateValEnodesShareMsg(remoteValidators []c
 func (pv *proxiedValidatorEngine) sendValEnodesShareMsg(proxyPeer consensus.Peer, remoteValidators []common.Address) error {
 	logger := pv.logger.New("func", "sendValEnodesShareMsg")
 
+	if !pv.backend.IsValidating() {
+		logger.Info("Skipping sending ValEnodesShareMsg b/c not validating")
+		return errors.New("Not validating")
+	}
+
 	msg, err := pv.generateValEnodesShareMsg(remoteValidators)
 	if err != nil {
 		logger.Error("Error generating Istanbul ValEnodesShare Message", "err", err)
@@ -124,7 +130,7 @@ func (p *proxyEngine) handleValEnodesShareMsg(peer consensus.Peer, payload []byt
 
 	// Verify that the sender is from the proxied validator
 	if msg.Address != p.config.ProxiedValidatorAddress {
-		logger.Error("Unauthorized valEnodesShare message", "sender address", msg.Address, "authorized sender address", p.config.ProxiedValidatorAddress)
+		logger.Error("Unauthorized Enode Certificate message", "sender address", msg.Address, "authorized sender address", p.config.ProxiedValidatorAddress)
 		return true, errUnauthorizedMessageFromProxiedValidator
 	}
 

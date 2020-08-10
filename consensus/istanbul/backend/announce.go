@@ -278,8 +278,8 @@ func (sb *Backend) shouldSaveAndPublishValEnodeURLs() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-
-	return validatorConnSet[sb.Address()], nil
+	// TODO(Joshua): Does this make sense?
+	return validatorConnSet[sb.Address()] || sb.IsValidator(), nil
 }
 
 // pruneAnnounceDataStructures will remove entries that are not in the validator connection set from all announce related data structures.
@@ -1288,12 +1288,13 @@ func (sb *Backend) handleEnodeCertificateMsg(peer consensus.Peer, payload []byte
 	}
 
 	// Ensure this node is a validator in the validator conn set
-	shouldSave, err := sb.shouldSaveAndPublishValEnodeURLs()
+	_, err = sb.shouldSaveAndPublishValEnodeURLs()
 	if err != nil {
 		logger.Error("Error checking if should save received validator enode url", "err", err)
 		return err
 	}
-	if !shouldSave {
+	// TODO(Joshua): Is this notion of being a validator correct?
+	if !sb.IsValidator() {
 		logger.Debug("This node should not save validator enode urls, ignoring enodeCertificate")
 		return nil
 	}
@@ -1314,7 +1315,8 @@ func (sb *Backend) handleEnodeCertificateMsg(peer consensus.Peer, payload []byte
 		return err
 	}
 
-	if sb.IsProxiedValidator() {
+	// TODO(joshua): Add if validating here as well?
+	if sb.IsProxiedValidator() && sb.IsValidating() {
 		// Send a valEnodesShare message to the proxy
 		sb.proxiedValidatorEngine.SendValEnodesShareMsgToAllProxies()
 	}

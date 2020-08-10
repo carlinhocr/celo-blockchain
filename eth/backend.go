@@ -33,6 +33,7 @@ import (
 	mockEngine "github.com/ethereum/go-ethereum/consensus/consensustest"
 	"github.com/ethereum/go-ethereum/consensus/istanbul"
 	istanbulBackend "github.com/ethereum/go-ethereum/consensus/istanbul/backend"
+	"github.com/ethereum/go-ethereum/consensus/istanbul/proxy"
 	"github.com/ethereum/go-ethereum/contract_comm"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/bloombits"
@@ -562,13 +563,6 @@ func (s *Ethereum) StartMining(threads int) error {
 				return fmt.Errorf("BLS signer missing: %v", err)
 			}
 			istanbul.Authorize(validator, blsbase, publicKey, wallet.Decrypt, wallet.SignData, blswallet.SignBLS)
-
-			if istanbul.IsProxiedValidator() {
-				if err := istanbul.StartProxiedValidatorEngine(); err != nil {
-					log.Error("Error in starting proxied validator engine", "err", err)
-					return err
-				}
-			}
 		}
 
 		// If mining is started, we can disable the transaction rejection mechanism
@@ -599,15 +593,6 @@ func (s *Ethereum) StopMining() {
 	}
 	// Stop the block creating itself
 	s.miner.Stop()
-
-	// Stop the proxied validator engine
-	if istanbul, isIstanbul := s.engine.(*istanbulBackend.Backend); isIstanbul {
-		if istanbul.IsProxiedValidator() {
-			if err := istanbul.StopProxiedValidatorEngine(); err != nil {
-				log.Warn("Error in stopping proxied validator engine", "err", err)
-			}
-		}
-	}
 }
 
 // StartMiningAtBlock starts the miner with the given number of CPU threads
@@ -704,6 +689,50 @@ func (s *Ethereum) stopAnnounce() error {
 	return nil
 }
 
+func (s *Ethereum) StartProxyEngine() error {
+	if istanbul, ok := s.engine.(consensus.Istanbul); ok {
+		if istanbul.IsProxy() {
+			return istanbul.StartProxyEngine()
+		} else {
+			return proxy.ErrNodeNotProxy
+		}
+	}
+	return nil
+}
+
+func (s *Ethereum) StartProxiedValidatorEngine() error {
+	if istanbul, ok := s.engine.(consensus.Istanbul); ok {
+		if istanbul.IsProxiedValidator() {
+			return istanbul.StartProxiedValidatorEngine()
+		} else {
+			return proxy.ErrNodeNotProxiedValidator
+		}
+	}
+	return nil
+}
+
+func (s *Ethereum) StopProxyEngine() error {
+	if istanbul, ok := s.engine.(consensus.Istanbul); ok {
+		if istanbul.IsProxy() {
+			return istanbul.StopProxyEngine()
+		} else {
+			return proxy.ErrNodeNotProxy
+		}
+	}
+	return nil
+}
+
+func (s *Ethereum) StopProxiedValidatorEngine() error {
+	if istanbul, ok := s.engine.(consensus.Istanbul); ok {
+		if istanbul.IsProxiedValidator() {
+			return istanbul.StopProxiedValidatorEngine()
+		} else {
+			return proxy.ErrNodeNotProxiedValidator
+		}
+	}
+	return nil
+}
+
 func (s *Ethereum) IsMining() bool      { return s.miner.Mining() }
 func (s *Ethereum) Miner() *miner.Miner { return s.miner }
 
@@ -779,7 +808,9 @@ func (s *Ethereum) Stop() error {
 	if s.lesServer != nil {
 		s.lesServer.Stop()
 	}
+	s.StopProxiedValidatorEngine()
 	s.stopAnnounce()
+	s.StopProxyEngine()
 	s.txPool.Stop()
 	s.miner.Stop()
 	s.eventMux.Stop()
