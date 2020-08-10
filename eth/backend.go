@@ -619,17 +619,17 @@ func (s *Ethereum) StartMiningAtBlock(threads, blockNumber int) {
 		for {
 			select {
 			case <-s.quitWait:
-				log.Error("Quit StartMiningAtBlock", "func", "StartMiningAtBlock")
+				log.Info("Quit StartMiningAtBlock", "func", "StartMiningAtBlock")
 				return // cancelled
 			case chainHeadEvent := <-chainHeadCh:
-				log.Error("Got chainHeadEvent", "func", "StartMiningAtBlock", "blockNumber", chainHeadEvent.Block.NumberU64())
+				log.Info("Got chainHeadEvent", "func", "StartMiningAtBlock", "blockNumber", chainHeadEvent.Block.NumberU64())
 				if chainHeadEvent.Block.NumberU64() == uint64(blockNumber) {
-					log.Error("Starting to mine", "func", "StartMiningAtBlock")
+					log.Info("Starting to mine", "func", "StartMiningAtBlock")
 					s.StartMining(threads)
 					return
 				}
 			case err := <-chainHeadSub.Err():
-				log.Error("Error in StartMiningAtBlock subscription to the blockchain's chainhead event", "err", err)
+				log.Info("Error in StartMiningAtBlock subscription to the blockchain's chainhead event", "err", err)
 				return
 			}
 			return
