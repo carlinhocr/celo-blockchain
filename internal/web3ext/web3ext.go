@@ -494,6 +494,18 @@ web3._extend({
 			call: 'miner_stop'
 		}),
 		new web3._extend.Method({
+			name: 'startAtBlock',
+			call: 'miner_startAtBlock',
+			params: 1,
+			inputFormatter: [null]
+		}),
+		new web3._extend.Method({
+			name: 'stopAtBlock',
+			call: 'miner_stopAtBlock',
+			params: 1,
+			inputFormatter: [null]
+		}),
+		new web3._extend.Method({
 			name: 'setEtherbase',
 			call: 'miner_setEtherbase',
 			params: 1,
