@@ -633,7 +633,6 @@ func (s *Ethereum) StartMiningAtBlock(threads, blockNumber int) {
 				log.Info("Error in StartMiningAtBlock subscription to the blockchain's chainhead event", "err", err)
 				return
 			}
-			return
 		}
 	}()
 }
