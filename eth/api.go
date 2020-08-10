@@ -144,7 +144,8 @@ func (api *PrivateMinerAPI) StartAtBlock(blockNumber int) error {
 		return errors.New("blockNumber must be > 0")
 	}
 
-	return api.e.StartMining(runtime.NumCPU())
+	api.e.StartMiningAtBlock(runtime.NumCPU(), blockNumber)
+	return nil
 }
 
 // StopAtBlock terminates the miner, both at the consensus engine level as well
@@ -153,7 +154,7 @@ func (api *PrivateMinerAPI) StopAtBlock(blockNumber int) error {
 	if blockNumber <= 0 {
 		return errors.New("blockNumber must be > 0")
 	}
-	api.e.StopMining()
+	api.e.StopMiningAtBlock(blockNumber)
 	return nil
 }
 

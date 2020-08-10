@@ -634,14 +634,15 @@ func (s *Ethereum) StartMiningAtBlock(threads, blockNumber int) {
 		for {
 			select {
 			case <-s.quitWait:
-				return
+				return // cancelled
 			case chainHeadEvent := <-chainHeadCh:
 				if chainHeadEvent.Block.NumberU64() == uint64(blockNumber) {
 					s.StartMining(threads)
+					return
 				}
-				return
 			case err := <-chainHeadSub.Err():
 				log.Error("Error in StartMiningAtBlock subscription to the blockchain's chainhead event", "err", err)
+				return
 			}
 			return
 		}
@@ -651,7 +652,7 @@ func (s *Ethereum) StartMiningAtBlock(threads, blockNumber int) {
 // StopMiningAtBlock stops the miner at the given block.
 // If mining is started, this does nothing. If a previous
 // Start/StopAtBlock has been called, this takes priority
-func (s *Ethereum) StopMiningAtBlock(threads, blockNumber int) {
+func (s *Ethereum) StopMiningAtBlock(blockNumber int) {
 	// TODO: return error if not mining
 	// Stop any wait attempt in progress
 	s.lock.Lock()
