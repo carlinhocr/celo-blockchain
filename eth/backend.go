@@ -662,14 +662,17 @@ func (s *Ethereum) StopMiningAtBlock(blockNumber int) {
 		for {
 			select {
 			case <-s.quitWait:
+				log.Info("Quit StopMiningAtBlock", "func", "StopMiningAtBlock")
 				return // cancelled
 			case chainHeadEvent := <-chainHeadCh:
+				log.Info("Got chainHeadEvent", "func", "StopMiningAtBlock", "blockNumber", chainHeadEvent.Block.NumberU64())
 				if chainHeadEvent.Block.NumberU64() == uint64(blockNumber) {
+					log.Info("Stopping mining", "func", "StopMiningAtBlock")
 					s.StopMining()
 					return
 				}
 			case err := <-chainHeadSub.Err():
-				log.Error("Error in StartMiningAtBlock subscription to the blockchain's chainhead event", "err", err)
+				log.Info("Error in StopMiningAtBlock subscription to the blockchain's chainhead event", "err", err)
 				return
 			}
 		}
