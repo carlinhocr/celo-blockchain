@@ -603,7 +603,7 @@ func (s *Ethereum) StartMiningAtBlock(threads int, blockNumber int64) {
 				return // cancelled
 			case chainHeadEvent := <-chainHeadCh:
 				log.Info("Got chainHeadEvent", "func", "StartMiningAtBlock", "blockNumber", chainHeadEvent.Block.NumberU64())
-				if chainHeadEvent.Block.NumberU64() == uint64(blockNumber) {
+				if chainHeadEvent.Block.NumberU64() == uint64(blockNumber-1) {
 					log.Info("Starting to mine", "func", "StartMiningAtBlock")
 					s.StartMining(threads)
 					return
