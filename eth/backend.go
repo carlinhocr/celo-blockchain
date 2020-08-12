@@ -91,9 +91,9 @@ type Ethereum struct {
 	APIBackend *EthAPIBackend
 
 	// Manage future start/stops
-	waitToChange  bool // If we are waiting to start/stop on a block
-	changeBlock   int  // Which block to change on
-	changeToStart bool // True => waiting on start, false => waiting on stop
+	waitToChange  bool  // If we are waiting to start/stop on a block
+	changeBlock   int64 // Which block to change on
+	changeToStart bool  // True => waiting on start, false => waiting on stop
 	quitWait      chan struct{}
 
 	miner      *miner.Miner
@@ -571,11 +571,12 @@ func (s *Ethereum) StopMining() {
 // StartMiningAtBlock starts the miner with the given number of CPU threads
 // at the given block. If mining is started, this does nothing. If a previous
 // Start/StopAtBlock has been called, this takes priority
-func (s *Ethereum) StartMiningAtBlock(threads, blockNumber int) {
+func (s *Ethereum) StartMiningAtBlock(threads int, blockNumber int64) {
 	// Stop any wait attempt in progress
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
+	// TODO create clear function and defer(?) clear wait
 	if s.waitToChange {
 		close(s.quitWait)
 	}
@@ -612,7 +613,7 @@ func (s *Ethereum) StartMiningAtBlock(threads, blockNumber int) {
 // StopMiningAtBlock stops the miner at the given block.
 // If mining is started, this does nothing. If a previous
 // Start/StopAtBlock has been called, this takes priority
-func (s *Ethereum) StopMiningAtBlock(blockNumber int) {
+func (s *Ethereum) StopMiningAtBlock(blockNumber int64) {
 	// TODO: return error if not mining
 	// Stop any wait attempt in progress
 	s.lock.Lock()

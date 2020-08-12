@@ -126,7 +126,7 @@ func (api *PrivateMinerAPI) Stop() {
 
 // StartAtBlock starts the miner at a given block. Will return error if
 // there is no block number. If mining is already running, no-op.
-func (api *PrivateMinerAPI) StartAtBlock(blockNumber int) error {
+func (api *PrivateMinerAPI) StartAtBlock(blockNumber int64) error {
 	if api.e.config.Istanbul.Proxy {
 		return errors.New("Can't mine if node is a proxy")
 	}
@@ -140,7 +140,7 @@ func (api *PrivateMinerAPI) StartAtBlock(blockNumber int) error {
 
 // StopAtBlock terminates the miner, both at the consensus engine level as well
 // as at the block creation level.
-func (api *PrivateMinerAPI) StopAtBlock(blockNumber int) error {
+func (api *PrivateMinerAPI) StopAtBlock(blockNumber int64) error {
 	if blockNumber <= 0 {
 		return errors.New("blockNumber must be > 0")
 	}
