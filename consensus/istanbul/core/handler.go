@@ -66,7 +66,7 @@ func (c *core) Stop() error {
 
 func (c *core) isPrimaryForSeq(seq *big.Int) bool {
 	c.startStopMu.RLock()
-	defer c.startStopMu.Unlock()
+	defer c.startStopMu.RUnlock()
 	// Return start <= seq < stop with start/stop at +-inf if nil
 	if c.startValidatingBlock != nil && seq.Cmp(c.startValidatingBlock) < 0 {
 		return false
