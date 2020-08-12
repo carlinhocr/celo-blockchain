@@ -259,6 +259,39 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 				}
 			}
 		}()
+		// If also a validator, run authorize here for replica validators
+		if config.Istanbul.Validator {
+			// Configure the local mining address for validators
+			eb, err := eth.Etherbase()
+			if err != nil {
+				log.Error("Cannot start validator without etherbase", "err", err)
+				return eth, fmt.Errorf("etherbase missing: %v", err)
+			}
+			blsbase, err := eth.BLSbase()
+			if err != nil {
+				log.Error("Cannot start validator without blsbase", "err", err)
+				return eth, fmt.Errorf("blsbase missing: %v", err)
+			}
+
+			if istanbul, isIstanbul := eth.engine.(*istanbulBackend.Backend); isIstanbul {
+				ebAccount := accounts.Account{Address: eb}
+				wallet, err := eth.accountManager.Find(ebAccount)
+				if wallet == nil || err != nil {
+					log.Error("Etherbase account unavailable locally", "err", err)
+					return eth, fmt.Errorf("signer missing: %v", err)
+				}
+				publicKey, err := wallet.GetPublicKey(ebAccount)
+				if err != nil {
+					return eth, fmt.Errorf("ECDSA public key missing: %v", err)
+				}
+				blswallet, err := eth.accountManager.Find(accounts.Account{Address: blsbase})
+				if blswallet == nil || err != nil {
+					log.Error("BLSbase account unavailable locally", "err", err)
+					return eth, fmt.Errorf("BLS signer missing: %v", err)
+				}
+				istanbul.Authorize(eb, blsbase, publicKey, wallet.Decrypt, wallet.SignData, blswallet.SignBLS)
+			}
+		}
 	}
 
 	eth.miner = miner.New(eth, &config.Miner, chainConfig, eth.EventMux(), eth.engine, eth.isLocalBlock, &chainDb)
