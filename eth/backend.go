@@ -259,39 +259,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 				}
 			}
 		}()
-		// If also a validator, run authorize here for replica validators
-		if config.Istanbul.Validator {
-			// Configure the local mining address for validators
-			eb, err := eth.Etherbase()
-			if err != nil {
-				log.Error("Cannot start validator without etherbase", "err", err)
-				return eth, fmt.Errorf("etherbase missing: %v", err)
-			}
-			blsbase, err := eth.BLSbase()
-			if err != nil {
-				log.Error("Cannot start validator without blsbase", "err", err)
-				return eth, fmt.Errorf("blsbase missing: %v", err)
-			}
-
-			if istanbul, isIstanbul := eth.engine.(*istanbulBackend.Backend); isIstanbul {
-				ebAccount := accounts.Account{Address: eb}
-				wallet, err := eth.accountManager.Find(ebAccount)
-				if wallet == nil || err != nil {
-					log.Error("Etherbase account unavailable locally", "err", err)
-					return eth, fmt.Errorf("signer missing: %v", err)
-				}
-				publicKey, err := wallet.GetPublicKey(ebAccount)
-				if err != nil {
-					return eth, fmt.Errorf("ECDSA public key missing: %v", err)
-				}
-				blswallet, err := eth.accountManager.Find(accounts.Account{Address: blsbase})
-				if blswallet == nil || err != nil {
-					log.Error("BLSbase account unavailable locally", "err", err)
-					return eth, fmt.Errorf("BLS signer missing: %v", err)
-				}
-				istanbul.Authorize(eb, blsbase, publicKey, wallet.Decrypt, wallet.SignData, blswallet.SignBLS)
-			}
-		}
 	}
 
 	eth.miner = miner.New(eth, &config.Miner, chainConfig, eth.EventMux(), eth.engine, eth.isLocalBlock, &chainDb)
@@ -494,6 +461,42 @@ func (s *Ethereum) SetEtherbase(etherbase common.Address) {
 	s.miner.SetEtherbase(etherbase)
 }
 
+// Authorize Istanbul Engine
+func (s *Ethereum) AuthorizeIstanbulEngine() error {
+	// Configure the local mining address
+	eb, err := s.Etherbase()
+	if err != nil {
+		log.Error("Cannot start mining without etherbase", "err", err)
+		return fmt.Errorf("etherbase missing: %v", err)
+	}
+	blsbase, err := s.BLSbase()
+	if err != nil {
+		log.Error("Cannot start mining without blsbase", "err", err)
+		return fmt.Errorf("blsbase missing: %v", err)
+	}
+
+	if istanbul, isIstanbul := s.engine.(*istanbulBackend.Backend); isIstanbul {
+		ebAccount := accounts.Account{Address: eb}
+		wallet, err := s.accountManager.Find(ebAccount)
+		if wallet == nil || err != nil {
+			log.Error("Etherbase account unavailable locally", "err", err)
+			return fmt.Errorf("signer missing: %v", err)
+		}
+		publicKey, err := wallet.GetPublicKey(ebAccount)
+		if err != nil {
+			log.Error("ECDSA public key missing", "err", err)
+			return fmt.Errorf("ECDSA public key missing: %v", err)
+		}
+		blswallet, err := s.accountManager.Find(accounts.Account{Address: blsbase})
+		if blswallet == nil || err != nil {
+			log.Error("BLSbase account unavailable locally", "err", err)
+			return fmt.Errorf("BLS signer missing: %v", err)
+		}
+		istanbul.Authorize(eb, blsbase, publicKey, wallet.Decrypt, wallet.SignData, blswallet.SignBLS)
+	}
+	return nil
+}
+
 // StartMining starts the miner with the given number of CPU threads. If mining
 // is already running, this method adjust the number of threads allowed to use
 // and updates the minimum price required by the transaction pool.
@@ -524,35 +527,15 @@ func (s *Ethereum) StartMining(threads int) error {
 		s.lock.RUnlock()
 		s.txPool.SetGasPrice(price)
 
-		// Configure the local mining address
 		eb, err := s.Etherbase()
 		if err != nil {
 			log.Error("Cannot start mining without etherbase", "err", err)
 			return fmt.Errorf("etherbase missing: %v", err)
 		}
-		blsbase, err := s.BLSbase()
-		if err != nil {
-			log.Error("Cannot start mining without blsbase", "err", err)
-			return fmt.Errorf("blsbase missing: %v", err)
-		}
 
-		if istanbul, isIstanbul := s.engine.(*istanbulBackend.Backend); isIstanbul {
-			ebAccount := accounts.Account{Address: eb}
-			wallet, err := s.accountManager.Find(ebAccount)
-			if wallet == nil || err != nil {
-				log.Error("Etherbase account unavailable locally", "err", err)
-				return fmt.Errorf("signer missing: %v", err)
-			}
-			publicKey, err := wallet.GetPublicKey(ebAccount)
-			if err != nil {
-				return fmt.Errorf("ECDSA public key missing: %v", err)
-			}
-			blswallet, err := s.accountManager.Find(accounts.Account{Address: blsbase})
-			if blswallet == nil || err != nil {
-				log.Error("BLSbase account unavailable locally", "err", err)
-				return fmt.Errorf("BLS signer missing: %v", err)
-			}
-			istanbul.Authorize(eb, blsbase, publicKey, wallet.Decrypt, wallet.SignData, blswallet.SignBLS)
+		// Configure the local mining address
+		if err := s.AuthorizeIstanbulEngine(); err != nil {
+			return err
 		}
 
 		// If mining is started, we can disable the transaction rejection mechanism

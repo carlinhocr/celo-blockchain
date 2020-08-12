@@ -454,6 +454,11 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			if err := ethereum.StartMining(threads); err != nil {
 				utils.Fatalf("Failed to start mining: %v", err)
 			}
+		} else {
+			// Authorize the istanbul engine for secondaries to work with the announce protocol
+			if err := ethereum.AuthorizeIstanbulEngine(); err != nil {
+				utils.Fatalf("Failed to authorize istanbul engine for secondary: %v", err)
+			}
 		}
 		// Start the proxy handler if this is a node is proxied and "mining"
 		if ctx.GlobalBool(utils.ProxiedFlag.Name) {
