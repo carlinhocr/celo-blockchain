@@ -69,6 +69,8 @@ const (
 	connectionTimeout = 10
 	// delegateSignTimeout waits for the proxy to sign a message
 	delegateSignTimeout = 5
+	// wait longer if there are difficulties with login
+	loginTimeout = 50
 	// statusUpdateInterval is the frequency of sending full node reports
 	statusUpdateInterval = 13
 	// valSetInterval is the frequency in blocks to send the validator set
@@ -376,21 +378,6 @@ func (s *Service) login(conn *websocket.Conn, sendCh chan *StatsPayload) error {
 		network = fmt.Sprintf("%d", lesInfo.Network)
 		protocol = fmt.Sprintf("les/%d", les.ClientProtocolVersions[0])
 	}
-
-	if s.backend.IsProxy() {
-		// Proxy needs a delegate send here to get ACK
-		select {
-		case signedMessage := <-sendCh:
-			err := s.handleDelegateSend(conn, signedMessage)
-			if err != nil {
-				return err
-			}
-		case <-time.After(delegateSignTimeout * time.Second):
-			// Login timeout, abort
-			return errors.New("delegation of login timed out")
-		}
-	}
-
 	auth := &authMsg{
 		ID: s.node,
 		Info: nodeInfo{
@@ -411,11 +398,37 @@ func (s *Service) login(conn *websocket.Conn, sendCh chan *StatsPayload) error {
 		return err
 	}
 
+	if s.backend.IsProxy() {
+		// Proxy needs a delegate send here to get ACK
+		select {
+		case signedMessage := <-sendCh:
+			err := s.handleDelegateSend(conn, signedMessage)
+			if err != nil {
+				return err
+			}
+		case <-time.After(delegateSignTimeout * time.Second):
+			// Login timeout, abort
+			return errors.New("delegation of login timed out")
+		}
+	}
+
 	// Retrieve the remote ack or connection termination
 	var ack map[string][]string
 
-	if err := conn.ReadJSON(&ack); err != nil {
-		return errors.New("unauthorized, try registering your validator to get whitelisted")
+	signalCh := make(chan error)
+
+	go func() {
+		signalCh <- conn.ReadJSON(&ack)
+	}()
+
+	select {
+	case <-time.After(loginTimeout * time.Second):
+		// Login timeout, abort
+		return errors.New("delegation of login timed out")
+	case err := <-signalCh:
+		if err != nil {
+			return errors.New("unauthorized, try registering your validator to get whitelisted")
+		}
 	}
 
 	emit, ok := ack["emit"]
@@ -650,12 +663,12 @@ func (s *Service) signStats(stats interface{}) (map[string]interface{}, error) {
 	}
 	msgHash := crypto.Keccak256Hash(msg)
 
-	validator, errEtherbase := s.eth.Validator()
+	etherBase, errEtherbase := s.eth.Etherbase()
 	if errEtherbase != nil {
 		return nil, errEtherbase
 	}
 
-	account := accounts.Account{Address: validator}
+	account := accounts.Account{Address: etherBase}
 	wallet, errWallet := s.eth.AccountManager().Find(account)
 	if errWallet != nil {
 		return nil, errWallet
@@ -674,7 +687,7 @@ func (s *Service) signStats(stats interface{}) (map[string]interface{}, error) {
 
 	proof := map[string]interface{}{
 		"signature": hexutil.Encode(signature),
-		"address":   validator,
+		"address":   etherBase,
 		"publicKey": hexutil.Encode(pubkeyBytes),
 		"msgHash":   msgHash.Hex(),
 	}
@@ -719,7 +732,13 @@ func (s *Service) sendStats(conn *websocket.Conn, action string, stats interface
 		if err != nil {
 			return err
 		}
-		go s.backend.SendDelegateSignMsgToProxiedValidator(msg)
+		go func() {
+			err := s.backend.SendDelegateSignMsgToProxiedValidator(msg)
+			if err != nil {
+				log.Warn("Failed to delegate", "err", err)
+				conn.Close()
+			}
+		}()
 		return nil
 	}
 
@@ -987,7 +1006,7 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 		gasprice  int
 	)
 	if s.eth != nil {
-		etherBase, _ = s.eth.Validator()
+		etherBase, _ = s.eth.Etherbase()
 		block := s.eth.BlockChain().CurrentBlock()
 
 		proxy = s.backend.IsProxy()

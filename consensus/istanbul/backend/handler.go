@@ -57,9 +57,14 @@ func (sb *Backend) HandleMsg(addr common.Address, msg p2p.Msg, peer consensus.Pe
 
 	// Handle messages as proxy
 	if sb.IsProxy() {
-		// Handle DelegateSign here rather than in proxy engine b/c of handling metho
+		// Handle DelegateSign here rather than in proxy engine b/c of handling method
 		if msg.Code == istanbul.DelegateSignMsg {
-			go sb.delegateSignFeed.Send(istanbul.MessageEvent{Payload: data})
+			if sb.shouldHandleDelegateSign(peer) {
+				go sb.delegateSignFeed.Send(istanbul.MessageEvent{Payload: data})
+				return true, nil
+			}
+			logger.Warn("Bad delegate sign message", "peer", peer)
+			// Do not return an error, otherwise bad ethstat setup might cause disconnecting from proxy
 			return true, nil
 		}
 		// This will handle the following messages:
@@ -84,7 +89,7 @@ func (sb *Backend) HandleMsg(addr common.Address, msg p2p.Msg, peer consensus.Pe
 		}
 		return true, nil
 	case istanbul.DelegateSignMsg:
-		if sb.shouldHandleDelegateSign() {
+		if sb.shouldHandleDelegateSign(peer) {
 			go sb.delegateSignFeed.Send(istanbul.MessageEvent{Payload: data})
 			return true, nil
 		}
@@ -113,8 +118,8 @@ func (sb *Backend) HandleMsg(addr common.Address, msg p2p.Msg, peer consensus.Pe
 	return false, nil
 }
 
-func (sb *Backend) shouldHandleDelegateSign() bool {
-	return sb.IsProxy() || sb.IsProxiedValidator()
+func (sb *Backend) shouldHandleDelegateSign(peer consensus.Peer) bool {
+	return sb.IsProxy() || (sb.IsProxiedValidator() && peer.PurposeIsSet(p2p.StatsProxyPurpose))
 }
 
 // SubscribeNewDelegateSignEvent subscribes a channel to any new delegate sign messages
@@ -287,7 +292,7 @@ func (sb *Backend) RegisterPeer(peer consensus.Peer, isProxiedPeer bool) error {
 
 	logger.Trace("RegisterPeer called", "peer", peer, "isProxiedPeer", isProxiedPeer)
 
-	// Check to see if this connecting peer if a proxied validator
+	// Check to see if this connecting peer is a proxied validator
 	if sb.IsProxy() && isProxiedPeer {
 		sb.proxyEngine.RegisterProxiedValidatorPeer(peer)
 	} else if sb.IsProxiedValidator() {

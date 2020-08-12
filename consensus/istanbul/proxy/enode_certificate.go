@@ -33,6 +33,8 @@ func (p *proxyEngine) handleEnodeCertificateMsg(peer consensus.Peer, payload []b
 	logger := p.logger.New("func", "handleEnodeCertificateMsg")
 
 	// Verify that this message is not from the proxied validator
+	p.proxiedValidatorsMu.RLock()
+	defer p.proxiedValidatorsMu.RUnlock()
 	if ok := p.proxiedValidators[peer]; ok {
 		logger.Warn("Got a enodeCertficate message from the proxied validator. Ignoring it", "from", peer.Node().ID())
 		return false, nil

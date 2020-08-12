@@ -64,10 +64,13 @@ func (p *proxyEngine) handleForwardMsg(peer consensus.Peer, payload []byte) (boo
 	logger.Trace("Handling a forward message")
 
 	// Verify that it's coming from the proxied validator
+	p.proxiedValidatorsMu.RLock()
 	if ok := p.proxiedValidators[peer]; !ok {
+		p.proxiedValidatorsMu.RUnlock()
 		logger.Warn("Got a forward consensus message from a peer that is not the proxy's proxied validator. Ignoring it", "from", peer.Node().ID())
 		return false, nil
 	}
+	p.proxiedValidatorsMu.RUnlock()
 
 	istMsg := new(istanbul.Message)
 

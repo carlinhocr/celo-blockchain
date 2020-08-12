@@ -79,6 +79,7 @@ type proxyEngine struct {
 	// Proxied Validators set and count of authorized addresses
 	proxiedValidators   map[consensus.Peer]bool
 	authorizedAddresses map[common.Address]int
+	proxiedValidatorsMu sync.RWMutex
 }
 
 // New creates a new proxy engine.
@@ -165,20 +166,27 @@ func (p *proxyEngine) run() {
 
 // Callback once validator dials us and is properly registered.
 func (p *proxyEngine) RegisterProxiedValidatorPeer(proxiedValidatorPeer consensus.Peer) {
-	// TODO: Does this need a lock?
+	p.proxiedValidatorsMu.Lock()
+	defer p.proxiedValidatorsMu.Unlock()
+
 	pubKey := proxiedValidatorPeer.Node().Pubkey()
 	addr := crypto.PubkeyToAddress(*pubKey)
 	logger := p.logger.New("func", "RegisterProxiedValidatorPeer")
 	logger.Warn("Adding validator", "addr", addr, "ID", proxiedValidatorPeer.Node().ID(), "enode", proxiedValidatorPeer.Node())
+
 	p.authorizedAddresses[addr] = p.authorizedAddresses[addr] + 1
 	p.proxiedValidators[proxiedValidatorPeer] = true
 }
 
 func (p *proxyEngine) UnregisterProxiedValidatorPeer(proxiedValidatorPeer consensus.Peer) {
+	p.proxiedValidatorsMu.Lock()
+	defer p.proxiedValidatorsMu.Unlock()
+
 	pubKey := proxiedValidatorPeer.Node().Pubkey()
 	addr := crypto.PubkeyToAddress(*pubKey)
 	logger := p.logger.New("func", "UnregisterProxiedValidatorPeer")
 	logger.Warn("Removing validator", "addr", addr, "enode", proxiedValidatorPeer.Node())
+
 	p.authorizedAddresses[addr] = p.authorizedAddresses[addr] - 1
 	if p.authorizedAddresses[addr] == 0 {
 		delete(p.authorizedAddresses, addr)
@@ -187,12 +195,16 @@ func (p *proxyEngine) UnregisterProxiedValidatorPeer(proxiedValidatorPeer consen
 }
 
 func (p *proxyEngine) GetProxiedValidatorsInfo() ([]ProxiedValidatorInfo, error) {
+	p.proxiedValidatorsMu.RLock()
+	defer p.proxiedValidatorsMu.RUnlock()
+
 	proxiedValidatorsInfo := []ProxiedValidatorInfo{}
 	for proxiedValidatorPeer := range p.proxiedValidators {
 		pubKey := proxiedValidatorPeer.Node().Pubkey()
 		addr := crypto.PubkeyToAddress(*pubKey)
 		proxiedValidatorInfo := ProxiedValidatorInfo{
-			Address:  addr,
+			Address: addr,
+
 			IsPeered: true,
 			Node:     proxiedValidatorPeer.Node()}
 		proxiedValidatorsInfo = append(proxiedValidatorsInfo, proxiedValidatorInfo)
@@ -203,6 +215,8 @@ func (p *proxyEngine) GetProxiedValidatorsInfo() ([]ProxiedValidatorInfo, error)
 // SendMsgToProxiedValidators will send a `celo` message to the proxied validators.
 func (p *proxyEngine) SendMsgToProxiedValidators(msgCode uint64, msg *istanbul.Message) error {
 	logger := p.logger.New("func", "SendMsgToProxiedValidators")
+	p.proxiedValidatorsMu.RLock()
+	defer p.proxiedValidatorsMu.RUnlock()
 	if len(p.proxiedValidators) == 0 {
 		logger.Warn("Proxy has no connected proxied validator.  Not sending message.")
 		return nil
