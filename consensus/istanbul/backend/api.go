@@ -216,3 +216,11 @@ func (api *API) GetProxiedValidators() ([]proxy.ProxiedValidatorInfo, error) {
 		return nil, proxy.ErrNodeNotProxy
 	}
 }
+
+func (api *API) StartValidating() error {
+	return nil
+}
+
+func (api *API) StopValidating() error {
+	return api.istanbul.StopValidating()
+}
