@@ -183,6 +183,14 @@ type Istanbul interface {
 	// StopValidating stops the validating engine
 	StopValidating() error
 
+	// SetStartValidatingBlock sets start in the range start <= seq < stop for which
+	// we are the primary validator
+	SetStartValidatingBlock(blockNumber *big.Int) error
+
+	// SetStopValidatingBlock sets stop in the range start <= seq < stop for which
+	// we are the primary validator
+	SetStopValidatingBlock(blockNumber *big.Int) error
+
 	// StartAnnouncing starts the announcing
 	StartAnnouncing() error
 

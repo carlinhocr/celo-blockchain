@@ -17,6 +17,8 @@
 package core
 
 import (
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/istanbul"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -34,6 +36,12 @@ type Engine interface {
 	ParentCommits() MessageSet
 	// ForceRoundChange will force round change to the current desiredRound + 1
 	ForceRoundChange()
+	// SetStartValidatingBlock sets start in the range start <= seq < stop for which
+	// we are the primary validator
+	SetStartValidatingBlock(blockNumber *big.Int) error
+	// SetStopValidatingBlock sets stop in the range start <= seq < stop for which
+	// we are the primary validator
+	SetStopValidatingBlock(blockNumber *big.Int) error
 }
 
 // State represents the IBFT state

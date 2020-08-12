@@ -585,6 +585,12 @@ func (s *Ethereum) StartMiningAtBlock(threads int, blockNumber int64) {
 	s.changeToStart = true
 	s.changeBlock = blockNumber
 
+	seq := big.NewInt(blockNumber)
+	if istanbul, isIstanbul := s.engine.(*istanbulBackend.Backend); isIstanbul {
+		// TODO: check error
+		istanbul.SetStartValidatingBlock(seq)
+	}
+
 	chainHeadCh := make(chan core.ChainHeadEvent, 10)
 	chainHeadSub := s.blockchain.SubscribeChainHeadEvent(chainHeadCh)
 
@@ -626,6 +632,12 @@ func (s *Ethereum) StopMiningAtBlock(blockNumber int64) {
 	s.waitToChange = true
 	s.changeToStart = false
 	s.changeBlock = blockNumber
+
+	seq := big.NewInt(blockNumber)
+	if istanbul, isIstanbul := s.engine.(*istanbulBackend.Backend); isIstanbul {
+		// TODO: check error
+		istanbul.SetStopValidatingBlock(seq)
+	}
 
 	chainHeadCh := make(chan core.ChainHeadEvent, 10)
 	chainHeadSub := s.blockchain.SubscribeChainHeadEvent(chainHeadCh)

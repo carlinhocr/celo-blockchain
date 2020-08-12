@@ -18,6 +18,7 @@ package core
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -111,6 +112,10 @@ type core struct {
 
 	validateFn func([]byte, []byte) (common.Address, error)
 
+	startStopMu          *sync.RWMutex
+	startValidatingBlock *big.Int
+	stopValidatingBlock  *big.Int
+
 	backlog MsgBacklog
 
 	rsdb      RoundStateDB
@@ -142,6 +147,7 @@ func New(backend CoreBackend, config *istanbul.Config) Engine {
 		selectProposer:     validator.GetProposerSelector(config.ProposerPolicy),
 		handlerWg:          new(sync.WaitGroup),
 		backend:            backend,
+		startStopMu:        new(sync.RWMutex),
 		pendingRequests:    prque.New(nil),
 		pendingRequestsMu:  new(sync.Mutex),
 		consensusTimestamp: time.Time{},
@@ -275,6 +281,38 @@ func UnionOfSeals(aggregatedSignature types.IstanbulAggregatedSeal, seals Messag
 		Signature: asig,
 		Round:     aggregatedSignature.Round,
 	}, nil
+}
+
+func (c *core) SetStartValidatingBlock(blockNumber *big.Int) error {
+	c.startStopMu.Lock()
+	defer c.startStopMu.Unlock()
+
+	if blockNumber == nil {
+		c.startValidatingBlock = nil
+		return nil
+	}
+
+	if c.stopValidatingBlock != nil && !(blockNumber.Cmp(c.stopValidatingBlock) < 0) {
+		return errors.New("Start block number should be less than the stop block number")
+	}
+	c.startValidatingBlock = blockNumber
+	return nil
+}
+
+func (c *core) SetStopValidatingBlock(blockNumber *big.Int) error {
+	c.startStopMu.Lock()
+	defer c.startStopMu.Unlock()
+
+	if blockNumber == nil {
+		c.stopValidatingBlock = nil
+		return nil
+	}
+
+	if c.startValidatingBlock != nil && !(blockNumber.Cmp(c.startValidatingBlock) > 0) {
+		return errors.New("Stop block number should be greater than the start block number")
+	}
+	c.startValidatingBlock = blockNumber
+	return nil
 }
 
 // Appends the current view and state to the given context.

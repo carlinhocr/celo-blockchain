@@ -64,6 +64,19 @@ func (c *core) Stop() error {
 	return nil
 }
 
+func (c *core) isPrimaryForSeq(seq *big.Int) bool {
+	c.startStopMu.RLock()
+	defer c.startStopMu.Unlock()
+	// Return start <= seq < stop with start/stop at +-inf if nil
+	if c.startValidatingBlock != nil && seq.Cmp(c.startValidatingBlock) < 0 {
+		return false
+	}
+	if c.stopValidatingBlock != nil && seq.Cmp(c.stopValidatingBlock) >= 0 {
+		return false
+	}
+	return true
+}
+
 // ----------------------------------------------------------------------------
 
 // Subscribe both internal and external events

@@ -948,6 +948,14 @@ func (sb *Backend) addParentSeal(chain consensus.ChainReader, header *types.Head
 	return writeAggregatedSeal(header, createParentSeal(), true)
 }
 
+func (sb *Backend) SetStartValidatingBlock(blockNumber *big.Int) error {
+	return sb.core.SetStartValidatingBlock(blockNumber)
+}
+
+func (sb *Backend) SetStopValidatingBlock(blockNumber *big.Int) error {
+	return sb.core.SetStopValidatingBlock(blockNumber)
+}
+
 // FIXME: Need to update this for Istanbul
 // sigHash returns the hash which is used as input for the Istanbul
 // signing. It is the hash of the entire header apart from the 65 byte signature
