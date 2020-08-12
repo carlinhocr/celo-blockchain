@@ -82,11 +82,11 @@ func (sb *Backend) HandleMsg(addr common.Address, msg p2p.Msg, peer consensus.Pe
 	// Handle messages are validator (validating or not)
 	switch msg.Code {
 	case istanbul.ConsensusMsg:
-		if sb.IsValidating() {
-			go sb.istanbulEventMux.Post(istanbul.MessageEvent{
-				Payload: data,
-			})
-		}
+		// if sb.IsValidating() {
+		go sb.istanbulEventMux.Post(istanbul.MessageEvent{
+			Payload: data,
+		})
+		// }
 		return true, nil
 	case istanbul.DelegateSignMsg:
 		if sb.shouldHandleDelegateSign(peer) {
