@@ -312,6 +312,16 @@ func (sb *Backend) IsValidator() bool {
 	return sb.config.Validator
 }
 
+//  IsElectedValidator returns true if instance is an elected validator
+func (sb *Backend) IsElectedValidator() bool {
+	// Check if this node is in the validator connection set
+	validatorConnSet, err := sb.retrieveValidatorConnSet()
+	if err != nil {
+		return false
+	}
+	return validatorConnSet[sb.Address()]
+}
+
 // SendDelegateSignMsgToProxy sends an istanbulDelegateSign message to a proxy
 // if one exists
 func (sb *Backend) SendDelegateSignMsgToProxy(msg []byte) error {
