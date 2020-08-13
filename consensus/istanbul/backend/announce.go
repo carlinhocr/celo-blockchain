@@ -200,7 +200,9 @@ func (sb *Backend) announceThread() {
 			}
 
 		case <-updateAnnounceVersionTickerCh:
-			updateAnnounceVersionFunc()
+			if shouldAnnounce {
+				updateAnnounceVersionFunc()
+			}
 
 		case <-queryEnodeTickerCh:
 			sb.startGossipQueryEnodeTask()
@@ -249,8 +251,9 @@ func (sb *Backend) announceThread() {
 					break drainLoop
 				}
 			}
-
-			updateAnnounceVersionFunc()
+			if shouldAnnounce {
+				updateAnnounceVersionFunc()
+			}
 
 		case <-pruneAnnounceDataStructuresTicker.C:
 			if err := sb.pruneAnnounceDataStructures(); err != nil {
