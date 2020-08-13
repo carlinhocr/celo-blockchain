@@ -100,9 +100,11 @@ func (sb *Backend) announceThread() {
 	var updateAnnounceVersionTicker *time.Ticker
 	var updateAnnounceVersionTickerCh <-chan time.Time
 
-	var announcing bool
-	var shouldAnnounce bool
-	var err error
+	// Elected but non validating validators listen & query for enodes
+	// Elected and validating validators annouce (updateAnnounceVersion)
+	var shouldListen, shouldAnnounce bool
+	var listening, announcing bool
+	// States: validator -> (elected & second, elected & primary, not elected) OR proxy
 
 	updateAnnounceVersionFunc := func() {
 		version := getTimestamp()
@@ -125,14 +127,10 @@ func (sb *Backend) announceThread() {
 		case <-checkIfShouldAnnounceTicker.C:
 			logger.Trace("Checking if this node should announce it's enode")
 
-			shouldAnnounce, err = sb.shouldSaveAndPublishValEnodeURLs()
-			if err != nil {
-				logger.Warn("Error in checking if should announce", err)
-				break
-			}
+			shouldListen = sb.IsElectedValidator()
+			shouldAnnounce = shouldListen && sb.IsValidating()
 
-			if shouldAnnounce && !announcing {
-				updateAnnounceVersionFunc()
+			if shouldListen && !listening {
 				// Gossip the announce after a minute.
 				// The delay allows for all receivers of the announce message to
 				// have a more up-to-date cached registered/elected valset, and
@@ -160,15 +158,26 @@ func (sb *Backend) announceThread() {
 				queryEnodeTicker = time.NewTicker(currentQueryEnodeTickerDuration)
 				queryEnodeTickerCh = queryEnodeTicker.C
 
+				listening = true
+				logger.Trace("Enabled periodic gossiping of announce message (listen mode)")
+
+			} else if !shouldListen && listening {
+				// Disable periodic queryEnode msgs by setting queryEnodeTickerCh to nil
+				queryEnodeTicker.Stop()
+				queryEnodeTickerCh = nil
+				listening = false
+				logger.Trace("Disabled periodic gossiping of announce message (listen mode)")
+			}
+
+			if shouldAnnounce && !announcing {
+				updateAnnounceVersionFunc()
+
 				updateAnnounceVersionTicker = time.NewTicker(5 * time.Minute)
 				updateAnnounceVersionTickerCh = updateAnnounceVersionTicker.C
 
 				announcing = true
 				logger.Trace("Enabled periodic gossiping of announce message")
 			} else if !shouldAnnounce && announcing {
-				// Disable periodic queryEnode msgs by setting queryEnodeTickerCh to nil
-				queryEnodeTicker.Stop()
-				queryEnodeTickerCh = nil
 				// Disable periodic updating of announce version
 				updateAnnounceVersionTicker.Stop()
 				updateAnnounceVersionTickerCh = nil
@@ -197,7 +206,7 @@ func (sb *Backend) announceThread() {
 			sb.startGossipQueryEnodeTask()
 
 		case <-sb.generateAndGossipQueryEnodeCh:
-			if shouldAnnounce {
+			if shouldListen {
 				switch queryEnodeFrequencyState {
 				case HighFreqBeforeFirstPeerState:
 					if len(sb.broadcaster.FindPeers(nil, p2p.AnyPurpose)) > 0 {
@@ -251,8 +260,11 @@ func (sb *Backend) announceThread() {
 		case <-sb.announceThreadQuit:
 			checkIfShouldAnnounceTicker.Stop()
 			pruneAnnounceDataStructuresTicker.Stop()
-			if announcing {
+			if listening {
 				queryEnodeTicker.Stop()
+
+			}
+			if announcing {
 				updateAnnounceVersionTicker.Stop()
 			}
 			return
@@ -269,17 +281,6 @@ func (sb *Backend) startGossipQueryEnodeTask() {
 	case sb.generateAndGossipQueryEnodeCh <- struct{}{}:
 	default:
 	}
-}
-
-func (sb *Backend) shouldSaveAndPublishValEnodeURLs() (bool, error) {
-
-	// Check if this node is in the validator connection set
-	validatorConnSet, err := sb.retrieveValidatorConnSet()
-	if err != nil {
-		return false, err
-	}
-	// TODO(Joshua): Does this make sense?
-	return validatorConnSet[sb.Address()] || sb.IsValidator(), nil
 }
 
 // pruneAnnounceDataStructures will remove entries that are not in the validator connection set from all announce related data structures.
@@ -669,12 +670,7 @@ func (sb *Backend) handleQueryEnodeMsg(addr common.Address, peer consensus.Peer,
 	}
 
 	// If this is an elected or nearly elected validator and core is started, then process the queryEnode message
-	shouldProcess, err := sb.shouldSaveAndPublishValEnodeURLs()
-	if err != nil {
-		logger.Warn("Error in checking if should process queryEnode", err)
-	}
-
-	if shouldProcess {
+	if sb.IsElectedValidator() {
 		logger.Trace("Processing an queryEnode message", "queryEnode records", qeData.EncryptedEnodeURLs)
 		for _, encEnodeURL := range qeData.EncryptedEnodeURLs {
 			// Only process an encEnodURL intended for this node
@@ -1046,11 +1042,7 @@ func (sb *Backend) handleVersionCertificatesMsg(addr common.Address, peer consen
 func (sb *Backend) upsertAndGossipVersionCertificateEntries(entries []*vet.VersionCertificateEntry) error {
 	logger := sb.logger.New("func", "upsertAndGossipVersionCertificateEntries")
 
-	shouldProcess, err := sb.shouldSaveAndPublishValEnodeURLs()
-	if err != nil {
-		logger.Warn("Error in checking if should process queryEnode", err)
-	}
-	if shouldProcess {
+	if sb.IsElectedValidator() {
 		// Update entries in val enode db
 		var valEnodeEntries []*istanbul.AddressEntry
 		for _, entry := range entries {
@@ -1292,13 +1284,7 @@ func (sb *Backend) handleEnodeCertificateMsg(peer consensus.Peer, payload []byte
 	}
 
 	// Ensure this node is a validator in the validator conn set
-	_, err = sb.shouldSaveAndPublishValEnodeURLs()
-	if err != nil {
-		logger.Error("Error checking if should save received validator enode url", "err", err)
-		return err
-	}
-	// TODO(Joshua): Is this notion of being a validator correct?
-	if !sb.IsValidator() {
+	if !sb.IsElectedValidator() {
 		logger.Debug("This node should not save validator enode urls, ignoring enodeCertificate")
 		return nil
 	}
