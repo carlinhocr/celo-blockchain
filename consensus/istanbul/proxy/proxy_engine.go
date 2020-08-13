@@ -146,9 +146,9 @@ func (p *proxyEngine) HandleMsg(peer consensus.Peer, msgCode uint64, payload []b
 		return p.handleConsensusMsg(peer, payload)
 	} else if msgCode == istanbul.EnodeCertificateMsg {
 		// See if the message is coming from the proxied validator
-		p.proxiedValidatorMu.RLock()
-		msgFromProxiedVal := p.proxiedValidator != nil && p.proxiedValidator.Node().ID() == peer.Node().ID()
-		p.proxiedValidatorMu.RUnlock()
+		p.proxiedValidatorsMu.RLock()
+		msgFromProxiedVal := p.proxiedValidators[peer]
+		p.proxiedValidatorsMu.RUnlock()
 		if msgFromProxiedVal {
 			return p.handleEnodeCertificateMsgFromProxiedValidator(peer, payload)
 		} else {
