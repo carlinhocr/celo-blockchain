@@ -628,6 +628,7 @@ func (sb *Backend) generateEncryptedEnodeURLs(queryEnodeEncryptedEnodeURLParams 
 // This function will handle a queryEnode message.
 func (sb *Backend) handleQueryEnodeMsg(addr common.Address, peer consensus.Peer, payload []byte) error {
 	logger := sb.logger.New("func", "handleQueryEnodeMsg")
+	logger.Trace("Handling querEnode msg")
 
 	// Since this is a gossiped messaged, mark that the peer gossiped it and check to see if this node already gossiped it
 	sb.markMessageProcessedByPeer(addr, payload)
@@ -720,12 +721,13 @@ func (sb *Backend) handleQueryEnodeMsg(addr common.Address, peer consensus.Peer,
 // Regardless, the origin node will be upserted into the val enode table
 // to ensure this node designates the origin node as a ValidatorPurpose peer.
 func (sb *Backend) answerQueryEnodeMsg(address common.Address, node *enode.Node, version uint) error {
-	logger := sb.logger.New("func", "answerQueryEnodeMsg")
+	logger := sb.logger.New("func", "answerQueryEnodeMsg", "address", address)
+	logger.Warn("Answering query enode message")
 
 	// Get the external enode that this validator is assigned to
 	externalEnodeMap, err := sb.getValProxyAssignments([]common.Address{address})
 	if err != nil {
-		logger.Warn("Error in retrieving assigned proxy for remove validator", "address", address, "err", err)
+		logger.Warn("Error in retrieving assigned proxy for remove validator", "err", err)
 		return err
 	}
 
