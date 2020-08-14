@@ -125,12 +125,14 @@ func (sb *Backend) announceThread() {
 	for {
 		select {
 		case <-checkIfShouldAnnounceTicker.C:
-			logger.Trace("Checking if this node should announce it's enode")
+			logger.Warn("Checking if this node should announce it's enode")
 
 			shouldListen = sb.IsElectedValidator()
 			shouldAnnounce = shouldListen && sb.IsValidating()
 
 			if shouldListen && !listening {
+				logger.Warn("Starting to listen")
+
 				// Gossip the announce after a minute.
 				// The delay allows for all receivers of the announce message to
 				// have a more up-to-date cached registered/elected valset, and
@@ -162,6 +164,8 @@ func (sb *Backend) announceThread() {
 				logger.Trace("Enabled periodic gossiping of announce message (listen mode)")
 
 			} else if !shouldListen && listening {
+				logger.Warn("Stopping listening")
+
 				// Disable periodic queryEnode msgs by setting queryEnodeTickerCh to nil
 				queryEnodeTicker.Stop()
 				queryEnodeTickerCh = nil
@@ -170,6 +174,8 @@ func (sb *Backend) announceThread() {
 			}
 
 			if shouldAnnounce && !announcing {
+				logger.Warn("Starting to announce")
+
 				updateAnnounceVersionFunc()
 
 				updateAnnounceVersionTicker = time.NewTicker(5 * time.Minute)
@@ -178,6 +184,8 @@ func (sb *Backend) announceThread() {
 				announcing = true
 				logger.Trace("Enabled periodic gossiping of announce message")
 			} else if !shouldAnnounce && announcing {
+				logger.Warn("Stopping announcing")
+
 				// Disable periodic updating of announce version
 				updateAnnounceVersionTicker.Stop()
 				updateAnnounceVersionTickerCh = nil
@@ -442,7 +450,7 @@ func (sb *Backend) getValProxyAssignments(valAddresses []common.Address) (map[co
 // Note that this function must ONLY be called by the announceThread.
 func (sb *Backend) generateAndGossipQueryEnode(version uint, enforceRetryBackoff bool) error {
 	logger := sb.logger.New("func", "generateAndGossipQueryEnode")
-	logger.Trace("generateAndGossipQueryEnode called\n")
+	logger.Warn("generateAndGossipQueryEnode called\n")
 
 	// Retrieve the set valEnodeEntries (and their publicKeys)
 	// for the queryEnode message
