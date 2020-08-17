@@ -44,8 +44,10 @@ const (
 // HandleMsg implements consensus.Handler.HandleMsg
 func (sb *Backend) HandleMsg(addr common.Address, msg p2p.Msg, peer consensus.Peer) (bool, error) {
 	logger := sb.logger.New("func", "HandleMsg", "msgCode", msg.Code)
+	logger.Trace("Got message in backend")
 
 	if !istanbul.IsIstanbulMsg(msg) {
+		logger.Trace("Message is not istanbul message")
 		return false, nil
 	}
 
