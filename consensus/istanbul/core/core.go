@@ -320,6 +320,27 @@ func (c *core) SetStopValidatingBlock(blockNumber *big.Int) error {
 	return nil
 }
 
+func (c *core) MakeReplica() {
+	c.startStopMu.Lock()
+	defer c.startStopMu.Unlock()
+
+	c.isReplica = true
+	c.enableStartStop = false
+	c.startValidatingBlock = nil
+	c.stopValidatingBlock = nil
+
+}
+
+func (c *core) MakePrimary() {
+	c.startStopMu.Lock()
+	defer c.startStopMu.Unlock()
+
+	c.isReplica = false
+	c.enableStartStop = false
+	c.startValidatingBlock = nil
+	c.stopValidatingBlock = nil
+}
+
 // Appends the current view and state to the given context.
 func (c *core) newLogger(ctx ...interface{}) log.Logger {
 	var seq, round, desired *big.Int

@@ -731,6 +731,14 @@ func (sb *Backend) StopProxiedValidatorEngine() error {
 	return nil
 }
 
+func (sb *Backend) MakeReplica() {
+	sb.core.MakeReplica()
+}
+
+func (sb *Backend) MakePrimary() {
+	sb.core.MakePrimary()
+}
+
 // snapshot retrieves the validator set needed to sign off on the block immediately after 'number'.  E.g. if you need to find the validator set that needs to sign off on block 6,
 // this method should be called with number set to 5.
 //

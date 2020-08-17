@@ -191,6 +191,12 @@ type Istanbul interface {
 	// we are the primary validator
 	SetStopValidatingBlock(blockNumber *big.Int) error
 
+	// TODO: Add errors
+	// MakeReplica clears the start/stop block state and makes this node a replica validator.
+	MakeReplica()
+	// MakePrimary clears the start/stop block state and makes this node the primary validator.
+	MakePrimary()
+
 	// StartAnnouncing starts the announcing
 	StartAnnouncing() error
 

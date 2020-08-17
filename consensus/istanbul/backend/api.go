@@ -249,3 +249,13 @@ func (api *API) StopValidatingAtBlock(blockNumber int64) error {
 	api.istanbul.SetStopValidatingBlock(seq)
 	return nil
 }
+
+// MakeReplica clears the start/stop block state and makes this node a replica validator.
+func (api *API) MakeReplica() {
+	api.istanbul.MakeReplica()
+}
+
+// MakePrimary clears the start/stop block state and makes this node the primary validator.
+func (api *API) MakePrimary() {
+	api.istanbul.MakePrimary()
+}
