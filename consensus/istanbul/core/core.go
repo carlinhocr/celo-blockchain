@@ -308,10 +308,10 @@ func (c *core) SetStopValidatingBlock(blockNumber *big.Int) error {
 		return nil
 	}
 
-	if c.startValidatingBlock != nil && !(blockNumber.Cmp(c.startValidatingBlock) > 0) {
+	if c.stopValidatingBlock != nil && !(blockNumber.Cmp(c.stopValidatingBlock) > 0) {
 		return errors.New("Stop block number should be greater than the start block number")
 	}
-	c.startValidatingBlock = blockNumber
+	c.stopValidatingBlock = blockNumber
 	return nil
 }
 
