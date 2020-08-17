@@ -71,7 +71,7 @@ func (c *core) Stop() error {
 func (c *core) IsPrimaryForSeq(seq *big.Int) bool {
 	c.startStopMu.RLock()
 	defer c.startStopMu.RUnlock()
-	if !c.enableStartStop {
+	if !c.startStopEnabled {
 		return !c.isReplica
 	}
 	// Return start <= seq < stop with start/stop at +-inf if nil

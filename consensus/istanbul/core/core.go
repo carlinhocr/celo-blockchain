@@ -113,7 +113,7 @@ type core struct {
 	validateFn func([]byte, []byte) (common.Address, error)
 
 	isReplica            bool // Overridden by start/stop blocks if start/stop is enabled.
-	enableStartStop      bool
+	startStopEnabled     bool
 	startValidatingBlock *big.Int
 	stopValidatingBlock  *big.Int
 	startStopMu          *sync.RWMutex
@@ -298,7 +298,7 @@ func (c *core) SetStartValidatingBlock(blockNumber *big.Int) error {
 	if c.stopValidatingBlock != nil && !(blockNumber.Cmp(c.stopValidatingBlock) < 0) {
 		return errors.New("Start block number should be less than the stop block number")
 	}
-	c.enableStartStop = true
+	c.startStopEnabled = true
 	c.startValidatingBlock = blockNumber
 	return nil
 }
@@ -315,7 +315,7 @@ func (c *core) SetStopValidatingBlock(blockNumber *big.Int) error {
 	if c.stopValidatingBlock != nil && !(blockNumber.Cmp(c.stopValidatingBlock) > 0) {
 		return errors.New("Stop block number should be greater than the start block number")
 	}
-	c.enableStartStop = true
+	c.startStopEnabled = true
 	c.stopValidatingBlock = blockNumber
 	return nil
 }
@@ -325,7 +325,7 @@ func (c *core) MakeReplica() {
 	defer c.startStopMu.Unlock()
 
 	c.isReplica = true
-	c.enableStartStop = false
+	c.startStopEnabled = false
 	c.startValidatingBlock = nil
 	c.stopValidatingBlock = nil
 
@@ -336,7 +336,7 @@ func (c *core) MakePrimary() {
 	defer c.startStopMu.Unlock()
 
 	c.isReplica = false
-	c.enableStartStop = false
+	c.startStopEnabled = false
 	c.startValidatingBlock = nil
 	c.stopValidatingBlock = nil
 }
