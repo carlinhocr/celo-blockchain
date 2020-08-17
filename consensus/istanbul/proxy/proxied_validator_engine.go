@@ -64,10 +64,7 @@ type BackendForProxiedValidatorEngine interface {
 	RetrieveEnodeCertificateMsgMap() map[enode.ID]*istanbul.EnodeCertMsg
 
 	// RetrieveValidatorConnSet will retrieve the validator connection set.
-	// The parameter `retrieveCachedVersion` will specify if the function should retrieve the
-	// set directly from making an EVM call (which is relatively expensive), or from the cached
-	// version (which will be no more than one minute old).
-	RetrieveValidatorConnSet(retrieveCachedVersion bool) (map[common.Address]bool, error)
+	RetrieveValidatorConnSet() (map[common.Address]bool, error)
 
 	// AddPeer will add a static peer
 	AddPeer(node *enode.Node, purpose p2p.PurposeFlag)
@@ -394,11 +391,7 @@ loop:
 				}
 				log.Info("Adding proxy node", "proxyNode", proxyNode, "proxyID", proxyID)
 				ps.addProxy(proxyNode)
-				var purpose p2p.PurposeFlag = p2p.ProxyPurpose
-				if proxyNode.StatsHandler {
-					purpose |= p2p.StatsProxyPurpose
-				}
-				pv.backend.AddPeer(proxyNode.InternalNode, purpose)
+				pv.backend.AddPeer(proxyNode.InternalNode, p2p.ProxyPurpose)
 			}
 
 		case rmProxyNodes := <-pv.removeProxies:
@@ -567,7 +560,7 @@ func (pv *proxiedValidatorEngine) getValidatorConnSetDiff(validators []common.Ad
 	logger.Trace("Proxied validator engine retrieving validator connection set diff", "validators", common.ConvertToStringSlice(validators))
 
 	// Get the set of active and registered validators
-	newValConnSet, err := pv.backend.RetrieveValidatorConnSet(false)
+	newValConnSet, err := pv.backend.RetrieveValidatorConnSet()
 	if err != nil {
 		logger.Warn("Proxy Handler couldn't get the validator connection set", "err", err)
 		return nil, nil, err
@@ -603,4 +596,19 @@ func (pv *proxiedValidatorEngine) getValidatorConnSetDiff(validators []common.Ad
 	logger.Trace("returned diff", "newVals", common.ConvertToStringSlice(newVals), "rmVals", common.ConvertToStringSlice(rmVals))
 
 	return newVals, rmVals, nil
+}
+
+func (pv *proxiedValidatorEngine) IsStatsProxy(peerID enode.ID) (bool, error) {
+	proxies, _, err := pv.GetProxiesAndValAssignments()
+	if err != nil {
+		return false, err
+	}
+
+	for _, proxy := range proxies {
+		if proxy.peer != nil && proxy.peer.Node().ID() == peerID {
+			return proxy.statsHandler, nil
+		}
+	}
+
+	return false, nil
 }

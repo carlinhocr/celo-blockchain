@@ -152,7 +152,7 @@ func (p *proxyEngine) HandleMsg(peer consensus.Peer, msgCode uint64, payload []b
 		if msgFromProxiedVal {
 			return p.handleEnodeCertificateMsgFromProxiedValidator(peer, payload)
 		} else {
-			return p.handleEnodeCertificateMsg(peer, payload)
+			return p.handleEnodeCertificateMsgFromRemoteVal(peer, payload)
 		}
 	}
 
