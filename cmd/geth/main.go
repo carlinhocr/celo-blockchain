@@ -420,8 +420,10 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		}
 	}
 	// Replicas only makes sense if we are mining or a validator
-	if !(ctx.GlobalBool(utils.IstanbulReplicaFlag.Name) && (ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.IstanbulValidatorFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name))) {
-		utils.Fatalf("Must run a replica as a validator, in dev mode, or with mining eneabled.")
+	if ctx.GlobalBool(utils.IstanbulReplicaFlag.Name) {
+		if !(ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.IstanbulValidatorFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name)) {
+			utils.Fatalf("Must run a replica as a validator, in dev mode, or with mining eneabled.")
+		}
 	}
 
 	if ctx.GlobalBool(utils.ProxyFlag.Name) {
