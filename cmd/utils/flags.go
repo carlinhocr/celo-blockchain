@@ -1427,6 +1427,7 @@ func setIstanbul(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	cfg.Istanbul.RoundStateDBPath = stack.ResolvePath(cfg.Istanbul.RoundStateDBPath)
 	// --mine implies --istanbul.validator (to maintain backwards compatibility)
 	cfg.Istanbul.Validator = ctx.GlobalIsSet(IstanbulValidatorFlag.Name) || ctx.GlobalIsSet(MiningEnabledFlag.Name)
+	cfg.Istanbul.Replica = ctx.GlobalIsSet(IstanbulReplicaFlag.Name)
 }
 
 func setProxyP2PConfig(ctx *cli.Context, proxyCfg *p2p.Config) {
@@ -1455,6 +1456,10 @@ func SetProxyConfig(ctx *cli.Context, nodeCfg *node.Config, ethCfg *eth.Config) 
 		// Validator must not be set for proxies
 		if ctx.GlobalIsSet(IstanbulValidatorFlag.Name) {
 			Fatalf("Option --%s must not be used if option --%s is used", IstanbulValidatorFlag.Name, ProxyFlag.Name)
+		}
+		// Replica must not be set for proxies
+		if ctx.GlobalIsSet(IstanbulReplicaFlag.Name) {
+			Fatalf("Option --%s must not be used if option --%s is used", IstanbulReplicaFlag.Name, ProxyFlag.Name)
 		}
 
 		if !ctx.GlobalIsSet(ProxiedValidatorAddressFlag.Name) {

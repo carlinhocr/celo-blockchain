@@ -419,6 +419,10 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			utils.Fatalf("Miners and Proxies must be run as a full node")
 		}
 	}
+	// Replicas only makes sense if we are mining or a validator
+	if !(ctx.GlobalBool(utils.IstanbulReplicaFlag.Name) && ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.IstanbulValidatorFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name)) {
+		utils.Fatalf("Must run a replica as a validator, in dev mode, or with mining eneabled.")
+	}
 
 	if ctx.GlobalBool(utils.ProxyFlag.Name) {
 		var ethereum *eth.Ethereum
@@ -451,11 +455,8 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		if ctx.GlobalIsSet(utils.MinerThreadsFlag.Name) {
 			threads = ctx.GlobalInt(utils.MinerThreadsFlag.Name)
 		}
-		// Don't start minig if just validator
-		if ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name) {
-			if err := ethereum.StartMining(threads); err != nil {
-				utils.Fatalf("Failed to start mining: %v", err)
-			}
+		if err := ethereum.StartMining(threads); err != nil {
+			utils.Fatalf("Failed to start mining: %v", err)
 		}
 		// Start the proxy handler if this is a node is proxied and "mining"
 		if ctx.GlobalBool(utils.ProxiedFlag.Name) {

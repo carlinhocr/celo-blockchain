@@ -149,6 +149,7 @@ func New(backend CoreBackend, config *istanbul.Config) Engine {
 		selectProposer:     validator.GetProposerSelector(config.ProposerPolicy),
 		handlerWg:          new(sync.WaitGroup),
 		backend:            backend,
+		isReplica:          config.Replica,
 		startStopMu:        new(sync.RWMutex),
 		pendingRequests:    prque.New(nil),
 		pendingRequestsMu:  new(sync.Mutex),
