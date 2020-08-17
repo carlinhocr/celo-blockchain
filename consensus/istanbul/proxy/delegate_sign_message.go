@@ -55,7 +55,7 @@ func (p *proxyEngine) SendDelegateSignMsgToProxiedValidator(msg []byte) error {
 		return ErrNoProxiedValidator
 	}
 	for proxiedValidator := range p.proxiedValidators {
-		p.backend.Unicast(proxiedValidator, msg, istanbul.EnodeCertificateMsg)
+		p.backend.Unicast(proxiedValidator, msg, istanbul.DelegateSignMsg)
 	}
 	return nil
 }
