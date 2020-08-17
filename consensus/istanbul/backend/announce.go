@@ -1297,12 +1297,12 @@ func (sb *Backend) handleEnodeCertificateMsg(peer consensus.Peer, payload []byte
 	validatorConnSet, err := sb.RetrieveValidatorConnSet()
 	if err != nil {
 		logger.Debug("Error in retrieving registered/elected valset", "err", err)
-		// return err
+		return err
 	}
 
 	if !validatorConnSet[msg.Address] {
 		logger.Debug("Received Istanbul Enode Certificate message originating from a node not in the validator conn set")
-		// return errUnauthorizedAnnounceMessage
+		return errUnauthorizedAnnounceMessage
 	}
 
 	if err := sb.valEnodeTable.UpsertVersionAndEnode([]*istanbul.AddressEntry{{Address: msg.Address, Node: parsedNode, Version: enodeCertificate.Version}}); err != nil {
