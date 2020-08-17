@@ -113,6 +113,7 @@ type core struct {
 	validateFn func([]byte, []byte) (common.Address, error)
 
 	startStopMu          *sync.RWMutex
+	disableStartStop     bool // true => validator is a replica w/out a start/stop block (aka start block is +inf)
 	startValidatingBlock *big.Int
 	stopValidatingBlock  *big.Int
 

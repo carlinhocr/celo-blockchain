@@ -27,6 +27,7 @@ import (
 type Engine interface {
 	Start() error
 	Stop() error
+	IsPrimaryForSeq(seq *big.Int) bool
 	// CurrentView returns the current view or nil if none
 	CurrentView() *istanbul.View
 	// CurrentRoundState returns the current roundState or nil if none

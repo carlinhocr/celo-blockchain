@@ -61,7 +61,7 @@ func (c *core) checkMessage(msgCode uint64, msgView *istanbul.View) error {
 	}
 
 	// Then reject messages for seqs where we are not the primary validator
-	if !c.isPrimaryForSeq(msgView.Sequence) {
+	if !c.IsPrimaryForSeq(msgView.Sequence) {
 		return errIgnoredMessage
 	}
 

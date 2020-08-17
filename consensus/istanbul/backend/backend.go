@@ -304,7 +304,7 @@ func (sb *Backend) IsProxiedValidator() bool {
 func (sb *Backend) IsValidating() bool {
 	sb.coreMu.RLock()
 	defer sb.coreMu.RUnlock()
-	return sb.coreStarted
+	return sb.coreStarted && sb.core.IsPrimaryForSeq(sb.core.CurrentView().Sequence)
 }
 
 // IsValidator return if instance is a validator (either proxied or standalone)
