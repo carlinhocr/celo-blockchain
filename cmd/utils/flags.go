@@ -742,6 +742,11 @@ var (
 		Name:  "istanbul.validator",
 		Usage: "Run this node as a validator. Use --mine to participate in consensus",
 	}
+	IstanbulReplicaFlag = cli.BoolFlag{
+		Name: "istanbul.replica",
+		// TODO(Joshua) clean up flags
+		Usage: "Run this node as a validator replica. Use ?? to participate in consensus",
+	}
 
 	// Announce settings
 	AnnounceQueryEnodeGossipPeriodFlag = cli.Uint64Flag{

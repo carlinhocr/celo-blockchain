@@ -231,6 +231,7 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.IstanbulProposerPolicyFlag,
 			utils.IstanbulLookbackWindowFlag,
 			utils.IstanbulValidatorFlag,
+			utils.IstanbulReplicaFlag,
 		},
 	},
 	{

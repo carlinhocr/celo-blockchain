@@ -141,6 +141,7 @@ var (
 		utils.IstanbulProposerPolicyFlag,
 		utils.IstanbulLookbackWindowFlag,
 		utils.IstanbulValidatorFlag,
+		utils.IstanbulReplicaFlag,
 		utils.AnnounceQueryEnodeGossipPeriodFlag,
 		utils.AnnounceAggressiveQueryEnodeGossipOnEnablementFlag,
 		utils.PingIPFromPacketFlag,
