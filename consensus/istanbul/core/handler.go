@@ -64,11 +64,15 @@ func (c *core) Stop() error {
 	return nil
 }
 
+// IsPrimaryForSeq determines is this node is the primary validator.
+// If start/stop checking is enabled (via a call to start/stop at block)
+// determine if start <= seq < stop. If not enabled, check if this was
+// set up with replica mode.
 func (c *core) IsPrimaryForSeq(seq *big.Int) bool {
 	c.startStopMu.RLock()
 	defer c.startStopMu.RUnlock()
-	if c.disableStartStop {
-		return false
+	if !c.enableStartStop {
+		return !c.isReplica
 	}
 	// Return start <= seq < stop with start/stop at +-inf if nil
 	if c.startValidatingBlock != nil && seq.Cmp(c.startValidatingBlock) < 0 {

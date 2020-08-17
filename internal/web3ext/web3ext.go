@@ -783,6 +783,18 @@ web3._extend({
 			params: 0,
 		}),
 		new web3._extend.Method({
+			name: 'startAtBlock',
+			call: 'istanbul_startValidatingAtBlock',
+			params: 1,
+			inputFormatter: [null]
+		}),
+		new web3._extend.Method({
+			name: 'stopAtBlock',
+			call: 'istanbul_stopValidatingAtBlock',
+			params: 1,
+			inputFormatter: [null]
+		}),
+		new web3._extend.Method({
 			name: 'validating',
 			call: 'istanbul_IsValidating',
 			params: 0,
