@@ -43,7 +43,7 @@ const (
 
 // HandleMsg implements consensus.Handler.HandleMsg
 func (sb *Backend) HandleMsg(addr common.Address, msg p2p.Msg, peer consensus.Peer) (bool, error) {
-	logger := sb.logger.New("func", "HandleMsg")
+	logger := sb.logger.New("func", "HandleMsg", "msgCode", msg.Code)
 
 	if !istanbul.IsIstanbulMsg(msg) {
 		return false, nil
@@ -78,7 +78,7 @@ func (sb *Backend) HandleMsg(addr common.Address, msg p2p.Msg, peer consensus.Pe
 			return handled, error
 		}
 	}
-
+	logger.Trace("Handling message as validator or for fallthrough from proxy")
 	// Handle messages are validator (validating or not)
 	switch msg.Code {
 	case istanbul.ConsensusMsg:

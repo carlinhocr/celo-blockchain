@@ -734,6 +734,8 @@ func (sb *Backend) answerQueryEnodeMsg(address common.Address, node *enode.Node,
 	if externalEnode := externalEnodeMap[address]; externalEnode != nil {
 		enodeCertificateMsgs := sb.RetrieveEnodeCertificateMsgMap()
 
+		// Secondary nodes don't have EnodeCertificates b/c (guess) the core is stopped.
+		// Does it make sense to keep going anyways?
 		enodeCertMsg := enodeCertificateMsgs[externalEnode.ID()]
 		if enodeCertMsg == nil {
 			return errNodeMissingEnodeCertificate
@@ -1297,7 +1299,7 @@ func (sb *Backend) handleEnodeCertificateMsg(peer consensus.Peer, payload []byte
 	}
 
 	// Ensure this node is a validator in the validator conn set
-	if !sb.IsElectedValidator() {
+	if !sb.IsElectedValidator() && !sb.IsValidator() {
 		logger.Debug("This node should not save validator enode urls, ignoring enodeCertificate")
 		return nil
 	}
@@ -1305,12 +1307,12 @@ func (sb *Backend) handleEnodeCertificateMsg(peer consensus.Peer, payload []byte
 	validatorConnSet, err := sb.retrieveValidatorConnSet()
 	if err != nil {
 		logger.Debug("Error in retrieving registered/elected valset", "err", err)
-		return err
+		// return err
 	}
 
 	if !validatorConnSet[msg.Address] {
 		logger.Debug("Received Istanbul Enode Certificate message originating from a node not in the validator conn set")
-		return errUnauthorizedAnnounceMessage
+		// return errUnauthorizedAnnounceMessage
 	}
 
 	if err := sb.valEnodeTable.UpsertVersionAndEnode([]*istanbul.AddressEntry{{Address: msg.Address, Node: parsedNode, Version: enodeCertificate.Version}}); err != nil {
