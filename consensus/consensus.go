@@ -172,6 +172,9 @@ type Istanbul interface {
 	// IsProxy returns true if this node is a proxy
 	IsProxy() bool
 
+	IsValidating() bool
+	IsElectedValidator() bool
+
 	// SetChain injects the blockchain and related functions to the istanbul consensus engine
 	SetChain(chain ChainReader, currentBlock func() *types.Block, stateAt func(common.Hash) (*state.StateDB, error))
 

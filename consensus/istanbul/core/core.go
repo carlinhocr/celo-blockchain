@@ -93,6 +93,9 @@ type CoreBackend interface {
 
 	// ParentBlockValidators returns the validator set of the given proposal's parent block
 	ParentBlockValidators(proposal istanbul.Proposal) istanbul.ValidatorSet
+
+	IsValidating() bool
+	IsElectedValidator() bool
 }
 
 type core struct {
