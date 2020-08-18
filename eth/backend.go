@@ -90,12 +90,6 @@ type Ethereum struct {
 
 	APIBackend *EthAPIBackend
 
-	// Manage future start/stops
-	waitToChange  bool  // If we are waiting to start/stop on a block
-	changeBlock   int64 // Which block to change on
-	changeToStart bool  // True => waiting on start, false => waiting on stop
-	quitWait      chan struct{}
-
 	miner      *miner.Miner
 	gasPrice   *big.Int
 	gatewayFee *big.Int

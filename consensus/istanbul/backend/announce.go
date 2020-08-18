@@ -830,7 +830,7 @@ var versionCertificateSalt = []byte("versionCertificate")
 
 // versionCertificate is a signed message from a validator indicating the most
 // recent version of its enode.
-type versionCertificate vet.VersionCertif icateEntry
+type versionCertificate vet.VersionCertificateEntry
 
 func newVersionCertificateFromEntry(entry *vet.VersionCertificateEntry) *versionCertificate {
 	return &versionCertificate{
