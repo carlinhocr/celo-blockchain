@@ -110,33 +110,14 @@ func (sb *Backend) Gossip(payload []byte, ethMsgCode uint64) error {
 
 // sendMsg will asynchronously send the the Celo messages to all the peers in the destPeers param.
 func (sb *Backend) asyncMulticast(destPeers map[enode.ID]consensus.Peer, payload []byte, ethMsgCode uint64) {
-	logger := sb.logger.New("func", "AsyncMulticastCeloMsg", "msgCode", ethMsgCode)
-	if !sb.IsValidating() {
-		switch ethMsgCode {
-		case istanbul.ConsensusMsg:
-			logger.Warn("Sending consensus message when not validating")
-		case istanbul.QueryEnodeMsg:
-			logger.Info("Sending QueryEnodeMsg message when not validating")
-		case istanbul.ValEnodesShareMsg:
-			logger.Warn("Sending ValEnodesShareMsg message when not validating")
-		case istanbul.DelegateSignMsg:
-			logger.Warn("Sending DelegateSignMsg message when not validating")
-		case istanbul.VersionCertificatesMsg:
-			logger.Info("Sending VersionCertificatesMsg message when not validating")
-		case istanbul.EnodeCertificateMsg:
-			logger.Warn("Sending EnodeCertificateMsg message when not validating")
-		case istanbul.ValidatorHandshakeMsg:
-			logger.Warn("Sending ValidatorHandshakeMsg message when not validating")
-		default:
-		}
-	}
+	logger := sb.logger.New("func", "AsyncMulticastCeloMsg")
 
 	for _, peer := range destPeers {
 		peer := peer // Create new instance of peer for the goroutine
 		go func() {
-			logger.Trace("Sending istanbul message(s) to peer", "peer", peer, "node", peer.Node())
+			logger.Trace("Sending istanbul message(s) to peer", "peer", peer, "node", peer.Node(), "msgCode", ethMsgCode)
 			if err := peer.Send(ethMsgCode, payload); err != nil {
-				logger.Warn("Error in sending message", "peer", peer, "node", peer.Node())
+				logger.Warn("Error in sending message", "peer", peer, "node", peer.Node(), "ethMsgCode", ethMsgCode)
 			}
 		}()
 	}
