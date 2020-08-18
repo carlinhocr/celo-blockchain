@@ -671,8 +671,8 @@ func (sb *Backend) handleQueryEnodeMsg(addr common.Address, peer consensus.Peer,
 		return err
 	}
 
-	// Only the primary processes the queryEnode message
-	if sb.IsValidating() {
+	// Only validators processes the queryEnode message
+	if sb.IsElectedValidator() {
 		logger.Trace("Processing an queryEnode message", "queryEnode records", qeData.EncryptedEnodeURLs)
 		for _, encEnodeURL := range qeData.EncryptedEnodeURLs {
 			// Only process an encEnodURL intended for this node
@@ -721,7 +721,7 @@ func (sb *Backend) answerQueryEnodeMsg(address common.Address, node *enode.Node,
 		return err
 	}
 
-	if externalEnode := externalEnodeMap[address]; externalEnode != nil {
+	if externalEnode := externalEnodeMap[address]; externalEnode != nil && sb.IsValidating() {
 		enodeCertificateMsgs := sb.RetrieveEnodeCertificateMsgMap()
 
 		// Secondary nodes don't have EnodeCertificates b/c (guess) the core is stopped.
