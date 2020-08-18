@@ -124,30 +124,6 @@ func (api *PrivateMinerAPI) Stop() {
 	api.e.StopMining()
 }
 
-// StartAtBlock starts the miner at a given block. Will return error if
-// there is no block number. If mining is already running, no-op.
-func (api *PrivateMinerAPI) StartAtBlock(blockNumber int64) error {
-	if api.e.config.Istanbul.Proxy {
-		return errors.New("Can't mine if node is a proxy")
-	}
-	if blockNumber <= 0 {
-		return errors.New("blockNumber must be > 0")
-	}
-
-	api.e.StartMiningAtBlock(runtime.NumCPU(), blockNumber)
-	return nil
-}
-
-// StopAtBlock terminates the miner, both at the consensus engine level as well
-// as at the block creation level.
-func (api *PrivateMinerAPI) StopAtBlock(blockNumber int64) error {
-	if blockNumber <= 0 {
-		return errors.New("blockNumber must be > 0")
-	}
-	api.e.StopMiningAtBlock(blockNumber)
-	return nil
-}
-
 // SetExtra sets the extra data string that is included when this miner mines a block.
 func (api *PrivateMinerAPI) SetExtra(extra string) (bool, error) {
 	if err := api.e.Miner().SetExtra([]byte(extra)); err != nil {
