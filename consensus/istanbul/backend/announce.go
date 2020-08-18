@@ -618,7 +618,7 @@ func (sb *Backend) generateEncryptedEnodeURLs(queryEnodeEncryptedEnodeURLParams 
 // This function will handle a queryEnode message.
 func (sb *Backend) handleQueryEnodeMsg(addr common.Address, peer consensus.Peer, payload []byte) error {
 	logger := sb.logger.New("func", "handleQueryEnodeMsg")
-	logger.Trace("Handling querEnode msg")
+	logger.Trace("Handling queryEnode msg")
 
 	// Since this is a gossiped messaged, mark that the peer gossiped it and check to see if this node already gossiped it
 	sb.markMessageProcessedByPeer(addr, payload)
@@ -786,7 +786,7 @@ func (sb *Backend) validateQueryEnode(msgAddress common.Address, qeData *queryEn
 	return true, nil
 }
 
-// regossipQueryEnode will regossip a received querEnode message.
+// regossipQueryEnode will regossip a received queryEnode message.
 // If this node regossiped a queryEnode from the same source address within the last
 // 5 minutes, then it won't regossip. This is to prevent a malicious validator from
 // DOS'ing the network with very frequent announce messages.
@@ -830,7 +830,7 @@ var versionCertificateSalt = []byte("versionCertificate")
 
 // versionCertificate is a signed message from a validator indicating the most
 // recent version of its enode.
-type versionCertificate vet.VersionCertificateEntry
+type versionCertificate vet.VersionCertif icateEntry
 
 func newVersionCertificateFromEntry(entry *vet.VersionCertificateEntry) *versionCertificate {
 	return &versionCertificate{
