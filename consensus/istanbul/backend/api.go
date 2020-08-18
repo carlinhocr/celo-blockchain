@@ -218,14 +218,6 @@ func (api *API) GetProxiedValidators() ([]proxy.ProxiedValidatorInfo, error) {
 	}
 }
 
-func (api *API) StartValidating() error {
-	return nil
-}
-
-func (api *API) StopValidating() error {
-	return api.istanbul.StopValidating()
-}
-
 // StartValidatingAtBlock starts the consensus engine on the given
 // block number.
 func (api *API) StartValidatingAtBlock(blockNumber int64) error {

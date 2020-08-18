@@ -761,16 +761,6 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'startValidating',
-			call: 'istanbul_startValidating',
-			params: 0,
-		}),
-		new web3._extend.Method({
-			name: 'stopValidating',
-			call: 'istanbul_stopValidating',
-			params: 0,
-		}),
-		new web3._extend.Method({
 			name: 'startAtBlock',
 			call: 'istanbul_startValidatingAtBlock',
 			params: 1,
