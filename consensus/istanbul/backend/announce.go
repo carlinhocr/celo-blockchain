@@ -671,8 +671,8 @@ func (sb *Backend) handleQueryEnodeMsg(addr common.Address, peer consensus.Peer,
 		return err
 	}
 
-	// If this is an elected or nearly elected validator and core is started, then process the queryEnode message
-	if sb.IsElectedValidator() {
+	// Only the primary processes the queryEnode message
+	if sb.IsValidating() {
 		logger.Trace("Processing an queryEnode message", "queryEnode records", qeData.EncryptedEnodeURLs)
 		for _, encEnodeURL := range qeData.EncryptedEnodeURLs {
 			// Only process an encEnodURL intended for this node
@@ -1289,7 +1289,7 @@ func (sb *Backend) handleEnodeCertificateMsg(peer consensus.Peer, payload []byte
 	}
 
 	// Ensure this node is a validator in the validator conn set
-	if !sb.IsElectedValidator() && !sb.IsValidator() {
+	if !sb.IsElectedValidator() {
 		logger.Debug("This node should not save validator enode urls, ignoring enodeCertificate")
 		return nil
 	}
@@ -1310,9 +1310,8 @@ func (sb *Backend) handleEnodeCertificateMsg(peer consensus.Peer, payload []byte
 		return err
 	}
 
-	// TODO(joshua): Add if validating here as well?
+	// // Send a valEnodesShare message to the proxy when it's the primary
 	if sb.IsProxiedValidator() && sb.IsValidating() {
-		// Send a valEnodesShare message to the proxy
 		sb.proxiedValidatorEngine.SendValEnodesShareMsgToAllProxies()
 	}
 
