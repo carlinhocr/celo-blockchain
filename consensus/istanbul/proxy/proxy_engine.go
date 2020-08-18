@@ -156,8 +156,6 @@ func (p *proxyEngine) HandleMsg(peer consensus.Peer, msgCode uint64, payload []b
 		}
 	}
 
-	p.logger.Warn("Unhandled msg", "msgCode", msgCode)
-
 	return false, nil
 }
 

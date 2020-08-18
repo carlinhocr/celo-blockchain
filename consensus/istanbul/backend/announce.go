@@ -125,13 +125,13 @@ func (sb *Backend) announceThread() {
 	for {
 		select {
 		case <-checkIfShouldAnnounceTicker.C:
-			logger.Warn("Checking if this node should announce it's enode")
+			logger.Trace("Checking if this node should announce it's enode")
 
 			shouldListen = sb.IsElectedValidator()
 			shouldAnnounce = shouldListen && sb.IsValidating()
 
 			if shouldListen && !listening {
-				logger.Warn("Starting to listen")
+				logger.Info("Starting to listen")
 
 				// Gossip the announce after a minute.
 				// The delay allows for all receivers of the announce message to
@@ -164,7 +164,7 @@ func (sb *Backend) announceThread() {
 				logger.Trace("Enabled periodic gossiping of announce message (listen mode)")
 
 			} else if !shouldListen && listening {
-				logger.Warn("Stopping listening")
+				logger.Info("Stopping listening")
 
 				// Disable periodic queryEnode msgs by setting queryEnodeTickerCh to nil
 				queryEnodeTicker.Stop()
@@ -174,7 +174,7 @@ func (sb *Backend) announceThread() {
 			}
 
 			if shouldAnnounce && !announcing {
-				logger.Warn("Starting to announce")
+				logger.Info("Starting to announce")
 
 				updateAnnounceVersionFunc()
 
@@ -184,7 +184,7 @@ func (sb *Backend) announceThread() {
 				announcing = true
 				logger.Trace("Enabled periodic gossiping of announce message")
 			} else if !shouldAnnounce && announcing {
-				logger.Warn("Stopping announcing")
+				logger.Info("Stopping announcing")
 
 				// Disable periodic updating of announce version
 				updateAnnounceVersionTicker.Stop()
@@ -618,7 +618,6 @@ func (sb *Backend) generateEncryptedEnodeURLs(queryEnodeEncryptedEnodeURLParams 
 // This function will handle a queryEnode message.
 func (sb *Backend) handleQueryEnodeMsg(addr common.Address, peer consensus.Peer, payload []byte) error {
 	logger := sb.logger.New("func", "handleQueryEnodeMsg")
-	logger.Trace("Handling queryEnode msg")
 
 	// Since this is a gossiped messaged, mark that the peer gossiped it and check to see if this node already gossiped it
 	sb.markMessageProcessedByPeer(addr, payload)
@@ -712,7 +711,6 @@ func (sb *Backend) handleQueryEnodeMsg(addr common.Address, peer consensus.Peer,
 // to ensure this node designates the origin node as a ValidatorPurpose peer.
 func (sb *Backend) answerQueryEnodeMsg(address common.Address, node *enode.Node, version uint) error {
 	logger := sb.logger.New("func", "answerQueryEnodeMsg", "address", address)
-	logger.Warn("Answering query enode message")
 
 	// Get the external enode that this validator is assigned to
 	externalEnodeMap, err := sb.getValProxyAssignments([]common.Address{address})
@@ -724,8 +722,6 @@ func (sb *Backend) answerQueryEnodeMsg(address common.Address, node *enode.Node,
 	if externalEnode := externalEnodeMap[address]; externalEnode != nil && sb.IsValidating() {
 		enodeCertificateMsgs := sb.RetrieveEnodeCertificateMsgMap()
 
-		// Secondary nodes don't have EnodeCertificates b/c (guess) the core is stopped.
-		// Does it make sense to keep going anyways?
 		enodeCertMsg := enodeCertificateMsgs[externalEnode.ID()]
 		if enodeCertMsg == nil {
 			return errNodeMissingEnodeCertificate
@@ -1310,7 +1306,7 @@ func (sb *Backend) handleEnodeCertificateMsg(peer consensus.Peer, payload []byte
 		return err
 	}
 
-	// // Send a valEnodesShare message to the proxy when it's the primary
+	// Send a valEnodesShare message to the proxy when it's the primary
 	if sb.IsProxiedValidator() && sb.IsValidating() {
 		sb.proxiedValidatorEngine.SendValEnodesShareMsgToAllProxies()
 	}
