@@ -319,7 +319,7 @@ func (sb *Backend) UnregisterPeer(peer consensus.Peer, isProxiedPeer bool) {
 }
 
 // Handshake allows the initiating peer to identify itself as a validator
-func (sb *Backend) Handshake(peer consensus.Peer) (bool, error) {
+func (sb *Backend) Handshake(peer consensus.Peer, peerIsProxiedVal bool) (bool, error) {
 	// Only written to if there was a non-nil error when sending or receiving
 	errCh := make(chan error)
 	isValidatorCh := make(chan bool)
@@ -357,7 +357,7 @@ func (sb *Backend) Handshake(peer consensus.Peer) (bool, error) {
 		isValidatorCh <- peerIsValidator
 	}
 	readHandshake := func() {
-		isValidator, err := sb.readValidatorHandshakeMessage(peer)
+		isValidator, err := sb.readValidatorHandshakeMessage(peer, peerIsProxiedVal)
 		if err != nil {
 			errCh <- err
 			return
@@ -386,7 +386,7 @@ func (sb *Backend) Handshake(peer consensus.Peer) (bool, error) {
 
 // readValidatorHandshakeMessage reads a validator handshake message.
 // Returns if the peer is a validator or if an error occurred.
-func (sb *Backend) readValidatorHandshakeMessage(peer consensus.Peer) (bool, error) {
+func (sb *Backend) readValidatorHandshakeMessage(peer consensus.Peer, peerIsProxiedVal bool) (bool, error) {
 	logger := sb.logger.New("func", "readValidatorHandshakeMessage")
 	peerMsg, err := peer.ReadMsg()
 	if err != nil {
@@ -407,6 +407,15 @@ func (sb *Backend) readValidatorHandshakeMessage(peer consensus.Peer) (bool, err
 	if err != nil {
 		return false, err
 	}
+
+	// If peer is from proxied validator, check if its address matches ProxiedValidatorAddress
+	// which is configured by --proxy.proxiedvalidatoraddress on this proxy
+	if peerIsProxiedVal {
+		if sb.config.ProxiedValidatorAddress != msg.Address {
+			return false, errors.New("proxied validator doesn't have correct address as configured in this proxy")
+		}
+	}
+
 	// If the Signature is empty, the peer has decided not to reveal its info
 	if len(msg.Signature) == 0 {
 		return false, nil
